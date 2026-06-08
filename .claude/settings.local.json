@@ -1,0 +1,10 @@
+{
+  "enabledMcpjsonServers": [
+    "better-icons"
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__better-icons__recommend_icons"
+    ]
+  }
+}

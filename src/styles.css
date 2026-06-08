@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Design tokens -------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --c-canvas: 233 240 236;     /* #E9F0EC soft mint */
+  --c-surface: 255 255 255;
+  --c-surface-2: 237 245 242;  /* #EDF5F2 */
+  --c-line: 23 50 77;          /* used at low alpha */
+  --c-ink: 16 33 50;           /* near-navy text */
+  --c-ink-soft: 55 81 102;     /* #375166 */
+  --c-ink-mute: 111 129 139;   /* #6F818B */
+  --c-brand: 47 127 143;       /* teal */
+  --c-accent: 242 185 94;      /* amber */
+
+  /* line is applied at 10% in components via /10 etc; keep raw rgb here */
+  --scroll-bg: rgb(233 240 236);
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --c-canvas: 9 16 26;         /* deep navy-black */
+  --c-surface: 18 28 41;       /* panel */
+  --c-surface-2: 24 36 52;
+  --c-line: 148 178 204;       /* light line at low alpha */
+  --c-ink: 232 240 248;
+  --c-ink-soft: 174 192 208;
+  --c-ink-mute: 124 145 163;
+  --c-brand: 90 166 179;       /* brighter teal for dark */
+  --c-accent: 255 217 138;
+
+  --scroll-bg: rgb(9 16 26);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+svg {
+  display: block;
+}
+
+/* Thin, themed scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-line) / 0.22);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-line) / 0.4);
+  background-clip: padding-box;
+}
+
+/* ---- Reusable component classes ------------------------------------ */
+@layer components {
+  .glass {
+    @apply border border-line/10 bg-surface/70 backdrop-blur-xl;
+  }
+  .card {
+    @apply rounded-3xl border border-line/10 bg-surface shadow-soft;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-mute;
+  }
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
+  }
+  /* gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-br from-brand via-teal-soft to-accent bg-clip-text text-transparent;
+  }
+}
+
+/* The lerp stage uses a CSS var set per-frame from JS */
+.welcome-stage {
+  background: var(--scroll-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
