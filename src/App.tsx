@@ -9,6 +9,23 @@ import { NodeDetail } from '@/screens/NodeDetail';
 import { Assessment } from '@/screens/Assessment';
 import { Routing } from '@/screens/Routing';
 
+// Public layout and screens
+import { PublicLayout } from '@/layout/PublicLayout';
+import { Trailers } from '@/screens/Trailers';
+import { Pricing } from '@/screens/Pricing';
+import { About } from '@/screens/About';
+import { Careers } from '@/screens/Careers';
+import { Blog } from '@/screens/Blog';
+import { Contact } from '@/screens/Contact';
+import { HelpCenter } from '@/screens/HelpCenter';
+import { Methodology } from '@/screens/Methodology';
+import { Changelog } from '@/screens/Changelog';
+import { Status } from '@/screens/Status';
+import { Privacy } from '@/screens/Privacy';
+import { Terms } from '@/screens/Terms';
+import { Security } from '@/screens/Security';
+import { Cookies } from '@/screens/Cookies';
+
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
 }
@@ -52,6 +69,23 @@ export default function App() {
               </ShellRoute>
             }
           />
+          
+          {/* Public Footer Routes */}
+          <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
+          <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
+          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+          <Route path="/careers" element={<PublicLayout><Careers /></PublicLayout>} />
+          <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
+          <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
+          <Route path="/help-center" element={<PublicLayout><HelpCenter /></PublicLayout>} />
+          <Route path="/methodology" element={<PublicLayout><Methodology /></PublicLayout>} />
+          <Route path="/changelog" element={<PublicLayout><Changelog /></PublicLayout>} />
+          <Route path="/status" element={<PublicLayout><Status /></PublicLayout>} />
+          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
+          <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+          <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
+          <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
