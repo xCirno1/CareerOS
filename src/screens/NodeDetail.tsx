@@ -39,7 +39,7 @@ export function NodeDetail() {
       <div className="grid min-h-[60vh] place-items-center p-6 text-center">
         <div>
           <Icons.Crosshair size={32} className="mx-auto text-ink-mute" />
-          <p className="mt-3 font-bold text-ink">Node not found</p>
+          <p className="mt-3 font-bold text-ink">Role not found</p>
           <Link to="/map" className="mt-3 inline-block">
             <Button size="sm" icon={Icons.ArrowLeft}>
               Back to map
@@ -105,7 +105,7 @@ export function NodeDetail() {
                     </Button>
                   </Link>
                   <Button size="sm" variant="secondary" icon={Icons.Bookmark}>
-                    Save node
+                    Save role
                   </Button>
                   <Button size="sm" variant="ghost" icon={Icons.Share2}>
                     Share
@@ -180,7 +180,7 @@ export function NodeDetail() {
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <Prospect icon={Icons.Trophy} text="Strong upward mobility into leadership tracks" />
                   <Prospect icon={Icons.Globe} text="High remote availability across markets" />
-                  <Prospect icon={Icons.Zap} text="Skills transfer to 4 adjacent nodes" />
+                  <Prospect icon={Icons.Zap} text="Skills transfer to 4 adjacent roles" />
                   <Prospect icon={Icons.Flame} text={`${demand.label} hiring momentum this quarter`} />
                 </div>
               </>
@@ -189,7 +189,7 @@ export function NodeDetail() {
 
           {/* Historical patterns */}
           <Card className="p-5 sm:p-6">
-            <SectionTitle icon={Icons.GitBranch} title="Historical patterns" hint="How people reached this node" />
+            <SectionTitle icon={Icons.GitBranch} title="Historical patterns" hint="How people reached this role" />
             {loading ? (
               <div className="mt-4 space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -283,7 +283,7 @@ export function NodeDetail() {
                 ))}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-ink-mute">No pinned roles on this node yet.</p>
+              <p className="mt-4 text-sm text-ink-mute">No pinned roles for this destination yet.</p>
             )}
           </Card>
         </div>

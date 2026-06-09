@@ -247,7 +247,7 @@ function RouteSteps({ route }: { route: RouteType }) {
                 <Icons.ArrowUpRight size={14} className="text-ink-mute" />
               </Link>
               <div className="text-xs text-ink-mute">
-                {isFirst ? 'Your starting node' : isLast ? 'Target node reached' : 'Stepping stone'}
+                {isFirst ? 'Your starting point' : isLast ? 'Destination reached' : 'Stepping stone'}
               </div>
 
               {edge && (
@@ -271,7 +271,7 @@ function RouteSteps({ route }: { route: RouteType }) {
       <div className="mt-1 flex flex-wrap gap-2">
         <Link to={`/node/${route.path[route.path.length - 1]}`} className="flex-1">
           <Button block size="sm" icon={Icons.Target} iconRight={Icons.ArrowRight}>
-            View target node
+            View destination
           </Button>
         </Link>
         <Button size="sm" variant="secondary" icon={Icons.Download}>

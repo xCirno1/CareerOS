@@ -34,6 +34,8 @@ export function ProgressRing({
     wine: 'stroke-wine',
     emerald: 'stroke-emerald-500',
   };
+  const compact = size <= 72;
+  const mid = size > 72 && size <= 100;
 
   return (
     <div
@@ -64,12 +66,29 @@ export function ProgressRing({
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
-          <div className="text-2xl font-extrabold text-ink">
+          <div
+            className={cn(
+              'flex items-baseline justify-center font-extrabold leading-none tracking-tight text-ink',
+              compact ? 'text-[1.4rem]' : mid ? 'text-2xl' : 'text-3xl',
+            )}
+          >
             {Math.round(animated)}
-            <span className="text-base text-ink-mute">{label ?? '%'}</span>
+            <span
+              className={cn(
+                'ml-px font-bold text-ink-mute',
+                compact ? 'text-[0.7rem]' : mid ? 'text-sm' : 'text-base',
+              )}
+            >
+              {label ?? '%'}
+            </span>
           </div>
           {sublabel && (
-            <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-mute">
+            <div
+              className={cn(
+                'mt-1 font-semibold uppercase text-ink-mute',
+                compact ? 'text-[8px] tracking-[0.1em]' : 'text-[10px] tracking-[0.14em]',
+              )}
+            >
               {sublabel}
             </div>
           )}

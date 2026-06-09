@@ -7,6 +7,9 @@ import { ASSESSMENT } from '@/lib/mockData';
 import { Button, Card, TextField, Logo, ProgressRing } from '@/ui/components';
 
 const STEPS = ['Background', 'Skills', 'Experience', 'Priorities', 'Create account'] as const;
+const BASE_SKILL_COUNT = 5;
+const MAX_VISIBLE_SKILL_CHIPS = 10;
+const MAX_SELECTED_SKILLS = 10;
 
 /**
  * One-time pre-account onboarding. This is the Career State Assessment, moved
@@ -19,7 +22,9 @@ export function Onboarding() {
   const [computing, setComputing] = useState(false);
 
   const [background, setBackground] = useState<string | null>(null);
-  const [skills, setSkills] = useState<Set<string>>(new Set(['React', 'TypeScript']));
+  const [otherBackground, setOtherBackground] = useState('');
+  const [skills, setSkills] = useState<Set<string>>(new Set());
+  const [customSkill, setCustomSkill] = useState('');
   const [years, setYears] = useState(4);
   const [role, setRole] = useState('Frontend Engineer');
   const [priorities, setPriorities] = useState<Set<string>>(new Set(['growth', 'impact']));
@@ -39,7 +44,7 @@ export function Onboarding() {
 
   const canNext =
     step === 0
-      ? !!background
+      ? !!background && (background !== 'other' || otherBackground.trim().length > 0)
       : step === 1
         ? skills.size > 0
         : step === 2
@@ -47,6 +52,31 @@ export function Onboarding() {
           : step === 3
             ? true
             : !!name && /.+@.+\..+/.test(email) && password.length >= 6;
+
+  const skillOptions = ASSESSMENT.skills as readonly string[];
+  const visibleSkillCount = Math.min(
+    skillOptions.length,
+    MAX_VISIBLE_SKILL_CHIPS,
+    BASE_SKILL_COUNT + skills.size,
+  );
+  const visibleSkills = skillOptions.slice(0, visibleSkillCount);
+  const customSkills = Array.from(skills).filter((skill) => !skillOptions.includes(skill));
+  const skillLimitReached = skills.size >= MAX_SELECTED_SKILLS;
+
+  const addCustomSkill = () => {
+    const nextSkill = customSkill.trim();
+    if (!nextSkill || skillLimitReached) return;
+
+    setSkills((prev) => {
+      if (prev.size >= MAX_SELECTED_SKILLS) return prev;
+      const duplicate = Array.from(prev).some(
+        (skill) => skill.toLowerCase() === nextSkill.toLowerCase(),
+      );
+      if (duplicate) return prev;
+      return new Set(prev).add(nextSkill);
+    });
+    setCustomSkill('');
+  };
 
   const finish = () => {
     setComputing(true);
@@ -74,12 +104,12 @@ export function Onboarding() {
             Let’s set you up
           </span>
           <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-ink sm:text-4xl">
-            {step < 4 ? 'Find your starting node' : 'Save your results'}
+            {step < 4 ? 'Find your starting point' : 'Save your results'}
           </h1>
           <p className="mt-1.5 text-sm text-ink-soft">
             {step < 4
               ? 'A one-time setup — no résumé needed. Answer what feels true today.'
-              : 'Create your account to lock in your node and unlock the map.'}
+              : 'Create your account to lock in your starting point and unlock the map.'}
           </p>
         </div>
 
@@ -97,59 +127,117 @@ export function Onboarding() {
 
         <Card className="p-5 sm:p-7">
           {step === 0 && (
-            <Step title="What’s your background?" hint="Pick the closest match.">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {ASSESSMENT.background.map((b) => {
-                  const Icon = getIcon(b.icon);
-                  const active = background === b.id;
-                  return (
-                    <button
-                      key={b.id}
-                      onClick={() => setBackground(b.id)}
-                      className={cn(
-                        'focus-ring flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition',
-                        active
-                          ? 'border-brand bg-brand/5 shadow-soft'
-                          : 'border-line/12 bg-surface hover:border-line/25',
-                      )}
-                    >
-                      <span
+            <Step
+              title="Which path best describes your background?"
+              hint="Choose the field, training route, or work experience that most shaped your current skills."
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {ASSESSMENT.background.map((b) => {
+                    const Icon = getIcon(b.icon);
+                    const active = background === b.id;
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => setBackground(b.id)}
                         className={cn(
-                          'grid h-10 w-10 place-items-center rounded-xl',
-                          active ? 'bg-brand text-white' : 'bg-surface-2 text-ink-soft',
+                          'focus-ring flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition',
+                          active
+                            ? 'border-brand bg-brand/5 shadow-soft'
+                            : 'border-line/12 bg-surface hover:border-line/25',
                         )}
                       >
-                        <Icon size={20} strokeWidth={2.1} />
-                      </span>
-                      <span className="text-sm font-bold text-ink">{b.label}</span>
-                    </button>
-                  );
-                })}
+                        <span
+                          className={cn(
+                            'grid h-8 w-8 shrink-0 place-items-center rounded-lg',
+                            active ? 'bg-brand text-white' : 'bg-surface-2 text-ink-soft',
+                          )}
+                        >
+                          <Icon size={16} strokeWidth={2.1} />
+                        </span>
+                        <span className="flex-1 text-sm font-bold leading-snug text-ink">{b.label}</span>
+                        {active && <Icons.Check size={15} className="shrink-0 text-brand" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {background === 'other' && (
+                  <TextField
+                    label="Tell us your actual background"
+                    icon={Icons.Shapes}
+                    value={otherBackground}
+                    onChange={(e) => setOtherBackground(e.target.value)}
+                    placeholder="e.g. healthcare, education, trades, finance"
+                  />
+                )}
               </div>
             </Step>
           )}
 
           {step === 1 && (
-            <Step title="Which skills are you strongest in?" hint="Select all that apply.">
-              <div className="flex flex-wrap gap-2">
-                {ASSESSMENT.skills.map((s) => {
-                  const active = skills.has(s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setSkills((prev) => toggle(prev, s))}
-                      className={cn(
-                        'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition',
-                        active
-                          ? 'border-brand bg-brand/10 text-brand'
-                          : 'border-line/15 bg-surface text-ink-soft hover:border-line/30',
-                      )}
-                    >
-                      {active && <Icons.Check size={14} />}
-                      {s}
-                    </button>
-                  );
-                })}
+            <Step title="Which skills are you strongest in?" hint="Choose up to 10, or add your own.">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {visibleSkills.map((s) => {
+                    const active = skills.has(s);
+                    const disabled = !active && skillLimitReached;
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setSkills((prev) => toggle(prev, s, MAX_SELECTED_SKILLS))}
+                        disabled={disabled}
+                        className={cn(
+                          'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition',
+                          active
+                            ? 'border-brand bg-brand/10 text-brand'
+                            : 'border-line/15 bg-surface text-ink-soft hover:border-line/30',
+                          disabled && 'cursor-not-allowed opacity-45 hover:border-line/15',
+                        )}
+                      >
+                        {active && <Icons.Check size={14} />}
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+                {customSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {customSkills.map((skill) => (
+                      <button
+                        key={skill}
+                        onClick={() => setSkills((prev) => toggle(prev, skill))}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition"
+                      >
+                        {skill}
+                        <Icons.X size={13} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <TextField
+                    label="Add a custom skill"
+                    icon={Icons.Sparkles}
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomSkill();
+                      }
+                    }}
+                    placeholder="e.g. Python, sales, cybersecurity, teaching"
+                    disabled={skillLimitReached}
+                  />
+                  <Button
+                    variant="secondary"
+                    icon={Icons.Plus}
+                    onClick={addCustomSkill}
+                    disabled={!customSkill.trim() || skillLimitReached}
+                  >
+                    Add
+                  </Button>
+                </div>
               </div>
             </Step>
           )}
@@ -220,7 +308,7 @@ export function Onboarding() {
           )}
 
           {step === 4 && (
-            <Step title="Create your account" hint="Almost there — your node is ready to save.">
+            <Step title="Create your account" hint="Almost there — your starting point is ready to save.">
               <div className="space-y-4">
                 <TextField
                   label="Full name"
@@ -309,7 +397,7 @@ function Computing() {
         </div>
         <h2 className="mt-6 font-display text-2xl font-extrabold text-ink">Building your map…</h2>
         <p className="mt-1.5 text-sm text-ink-soft">
-          Placing your node and routing your first move.
+          Placing your starting point and routing your first move.
         </p>
       </div>
     </div>

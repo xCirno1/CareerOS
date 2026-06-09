@@ -9,7 +9,6 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { to: '/map', label: 'Traileers Map', icon: Icons.Network },
-  { to: '/assessment', label: 'Assessment', icon: Icons.ClipboardCheck },
   { to: '/routing', label: 'Pathways', icon: Icons.Route },
 ];
 

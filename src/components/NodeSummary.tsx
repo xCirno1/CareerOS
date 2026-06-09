@@ -3,7 +3,6 @@ import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { DEMAND_META, type CareerNode } from '@/lib/mockData';
 import {
-  Badge,
   Button,
   ProgressRing,
   Sparkline,
@@ -18,28 +17,42 @@ const ACCENT_HEX: Record<string, string> = {
   navy: '#17324d',
 };
 
+function matchTone(match: number): 'emerald' | 'brand' | 'amber' | 'wine' {
+  if (match >= 80) return 'emerald';
+  if (match >= 60) return 'brand';
+  if (match >= 40) return 'amber';
+  return 'wine';
+}
+
 export function NodeSummary({ node }: { node: CareerNode }) {
   const demand = DEMAND_META[node.demand];
   const accent = ACCENT_HEX[node.accent];
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-4">
         <span
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl"
           style={{ backgroundColor: `${accent}1A`, color: accent }}
         >
-          <Icons.CircleDot size={22} strokeWidth={2.2} />
+          <Icons.CircleDot size={24} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <Badge tone="neutral" className="capitalize">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
             {node.kind}
-          </Badge>
-          <h2 className="mt-1.5 text-lg font-bold leading-tight text-ink">{node.title}</h2>
+          </span>
+          <h2 className="mt-0.5 line-clamp-2 text-xl font-extrabold leading-[1.15] text-ink">
+            {node.title}
+          </h2>
         </div>
-        <ProgressRing value={node.match} size={64} stroke={6} sublabel="match" />
+        <div className="flex shrink-0 flex-col items-center gap-1.5">
+          <ProgressRing value={node.match} size={60} stroke={6} tone={matchTone(node.match)} />
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">
+            Match
+          </span>
+        </div>
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-ink-soft">{node.summary}</p>
+      <p className="mt-4 text-sm leading-6 text-ink-soft">{node.summary}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <Metric
@@ -70,9 +83,15 @@ export function NodeSummary({ node }: { node: CareerNode }) {
       </div>
 
       <div className="mt-4 rounded-2xl bg-surface-2 p-3.5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="eyebrow">6-quarter demand</span>
-          <Sparkline data={node.trend} tone={node.growth >= 0 ? 'emerald' : 'wine'} width={92} height={30} />
+          <Sparkline
+            data={node.trend}
+            tone={node.growth >= 0 ? 'emerald' : 'wine'}
+            width={92}
+            height={30}
+            className="shrink-0"
+          />
         </div>
       </div>
 
@@ -118,12 +137,12 @@ function Metric({
   valueClass?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line/10 bg-surface p-3">
+    <div className="flex min-h-[84px] flex-col justify-between rounded-2xl border border-line/10 bg-surface p-3">
       <div className="flex items-center gap-1.5 text-ink-mute">
-        <Icon size={14} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">{label}</span>
+        <Icon size={14} className="shrink-0" />
+        <span className="min-w-0 text-[11px] font-semibold uppercase tracking-[0.08em]">{label}</span>
       </div>
-      <div className={cn('mt-1 text-base font-bold text-ink', valueClass)}>{value}</div>
+      <div className={cn('mt-2 text-base font-bold leading-none text-ink', valueClass)}>{value}</div>
     </div>
   );
 }
@@ -131,13 +150,16 @@ function Metric({
 export function NodeSummarySkeleton() {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start gap-3">
-        <Skeleton className="h-11 w-11" rounded="rounded-2xl" />
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-12 w-12" rounded="rounded-2xl" />
         <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-16" rounded="rounded-full" />
+          <Skeleton className="h-3 w-12" rounded="rounded-full" />
           <Skeleton className="h-5 w-2/3" />
         </div>
-        <Skeleton className="h-16 w-16" rounded="rounded-full" />
+        <div className="flex flex-col items-center gap-1.5">
+          <Skeleton className="h-[60px] w-[60px]" rounded="rounded-full" />
+          <Skeleton className="h-2.5 w-9" rounded="rounded-full" />
+        </div>
       </div>
       <SkeletonText className="mt-4" lines={3} />
       <div className="mt-4 grid grid-cols-2 gap-2.5">

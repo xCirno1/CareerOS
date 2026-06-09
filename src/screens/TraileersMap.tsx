@@ -39,7 +39,7 @@ export function TraileersMap() {
         eyebrow="Traileers™ Map"
         icon={Icons.Network}
         title="Your career landscape"
-        subtitle="Each node is a job, career or route. Lines are transitions real people have made."
+        subtitle="Each point is a job, career or route. Lines are transitions real people have made."
         actions={
           <>
             <Button
@@ -145,8 +145,8 @@ function EmptyPanel() {
     <div className="grid h-full place-items-center text-center">
       <div className="text-ink-mute">
         <Icons.Crosshair size={28} className="mx-auto mb-2" />
-        <p className="text-sm font-semibold">Select a node</p>
-        <p className="text-xs">Tap any node on the map to see its detail.</p>
+        <p className="text-sm font-semibold">Select a point</p>
+        <p className="text-xs">Tap any point on the map to see its detail.</p>
       </div>
     </div>
   );

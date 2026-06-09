@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <label className="flex h-10 w-full items-center gap-2.5 rounded-2xl border border-line/12 bg-surface px-3.5 text-ink-mute focus-within:border-brand/40">
               <Icons.Search size={17} />
               <input
-                placeholder="Search nodes, skills, employers…"
+                placeholder="Search roles, skills, employers…"
                 className="h-full w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-mute"
               />
               <kbd className="hidden rounded-md border border-line/15 px-1.5 text-[10px] font-semibold text-ink-mute sm:block">

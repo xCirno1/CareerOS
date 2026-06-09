@@ -14,6 +14,7 @@ import {
 import { clamp01, lerp, smoothstep, bandOpacity } from '@/lib/math';
 import { getNode } from '@/lib/mockData';
 import { Button, Logo, ThemeToggle, Reveal } from '@/ui/components';
+import { RocketLaunch, RocketSVG } from '@/ui/transitions';
 
 const ACCENT_HEX: Record<string, string> = {
   teal: '#2f7f8f',
@@ -47,6 +48,7 @@ function NodeChip({
   const h = 38;
   const left = x - w / 2;
   const top = y - h / 2;
+  const tagW = tag ? tag.length * 7.2 + 20 : 0;
   const hex = ACCENT_HEX[accent] ?? ACCENT_HEX.navy;
   const hi = state === 'active' || state === 'current' || state === 'target';
   const ringHex =
@@ -59,14 +61,16 @@ function NodeChip({
           <rect
             x={left}
             y={top - 24}
-            width={tag.length * 6.6 + 16}
+            width={tagW}
             height={17}
             rx={5}
             fill={ringHex}
           />
           <text
-            x={left + 8}
+            x={left + tagW / 2}
             y={top - 15.5}
+            textAnchor="middle"
+            dominantBaseline="central"
             fontSize={9.5}
             fontWeight={700}
             letterSpacing={1.2}
@@ -320,8 +324,8 @@ const GALLERY: ReactNode[] = [
     </div>
   </CardFrame>,
 
-  // Node detail (white)
-  <CardFrame key="node" label="Node detail" className="bg-white text-navy">
+  // Role detail (white)
+  <CardFrame key="node" label="Role detail" className="bg-white text-navy">
     <p className="font-display text-2xl font-extrabold">Product Lead</p>
     <div className="mt-3 space-y-2 text-sm">
       <div className="flex justify-between"><span className="opacity-60">Salary</span><span className="font-bold">$145–210k</span></div>
@@ -425,12 +429,12 @@ function Hero() {
               </h1>
               <div className="mt-6 flex items-end justify-between gap-4">
                 <p className="hidden max-w-xs text-sm text-ink-mute sm:block">
-                  Find your node. See the route. Move with the odds.
+                  Find your starting point. See the route. Move with the odds.
                 </p>
                 <Magnetic className="ml-auto">
                   <Link to="/onboarding">
                     <Button size="lg" iconRight={Icons.ArrowRight}>
-                      Find my node
+                      Find my starting point
                     </Button>
                   </Link>
                 </Magnetic>
@@ -452,7 +456,7 @@ function Hero() {
       {/* subhead */}
       <div className="mx-auto mt-12 max-w-2xl px-5 text-center">
         <p className="text-xl font-medium leading-relaxed text-ink sm:text-2xl">
-          CareerOS turns the entire job landscape into one interactive map. Find your node,
+          CareerOS turns the entire job landscape into one interactive map. Find your starting point,
           design, and route your next move with confidence.
         </p>
       </div>
@@ -490,15 +494,15 @@ function TrustStrip() {
 const STORY = [
   {
     step: '01',
-    label: 'Your starting node',
+    label: 'Your starting point',
     title: 'Start from where you really are.',
-    body: 'CareerOS places you on a single node — inferred from your background, skills and the work you’ve actually shipped.',
+    body: 'CareerOS places you at a clear starting point — inferred from your background, skills and the work you’ve actually shipped.',
   },
   {
     step: '02',
     label: 'One connected step',
     title: 'Each role links to the next realistic move.',
-    body: 'No leaps. Every node connects to the one above it by a transition real people have actually made.',
+    body: 'No leaps. Every point connects to the one above it by a transition real people have actually made.',
   },
   {
     step: '03',
@@ -937,42 +941,42 @@ const FEATURES: {
   link: string;
   visual: ReactNode;
 }[] = [
-  {
-    header: 'Find your real starting node',
-    body: 'Answer a two-minute assessment and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
-    to: '/onboarding',
-    link: 'Take the assessment',
-    visual: <VisualAssessment />,
-  },
-  {
-    header: 'See every move — then the best route',
-    body: 'Every viable path to a target node is laid out at once, with one recommended route resolved from real tradeoffs: time, qualifications, pay and your own interests.',
-    to: '/routing',
-    link: 'Explore routing',
-    visual: <VisualRouting />,
-  },
-  {
-    header: 'Score every step on real outcomes',
-    body: 'Each hop carries honest odds and a typical timeline, compared against thousands of historical trajectories. Grounded in evidence, not vibes.',
-    to: '/routing',
-    link: 'See feasibility',
-    visual: <VisualFeasibility />,
-  },
-  {
-    header: 'Track live demand & salary',
-    body: 'Per-node prospects, salary bands and market demand — personalized to your profile and refreshed as the market moves underneath you.',
-    to: '/map',
-    link: 'Open the map',
-    visual: <VisualDemand />,
-  },
-  {
-    header: 'Learn from how thousands moved',
-    body: 'Common trajectories, lateral shifts, career gaps and higher-study routes other people have actually taken to reach the node you’re aiming for.',
-    to: '/map',
-    link: 'View patterns',
-    visual: <VisualPatterns />,
-  },
-];
+    {
+      header: 'Find your real starting point',
+      body: 'Answer a two-minute assessment and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
+      to: '/onboarding',
+      link: 'Take the assessment',
+      visual: <VisualAssessment />,
+    },
+    {
+      header: 'See every move — then the best route',
+      body: 'Every viable path to your destination is laid out at once, with one recommended route resolved from real tradeoffs: time, qualifications, pay and your own interests.',
+      to: '/routing',
+      link: 'Explore routing',
+      visual: <VisualRouting />,
+    },
+    {
+      header: 'Score every step on real outcomes',
+      body: 'Each hop carries honest odds and a typical timeline, compared against thousands of historical trajectories. Grounded in evidence, not vibes.',
+      to: '/routing',
+      link: 'See feasibility',
+      visual: <VisualFeasibility />,
+    },
+    {
+      header: 'Track live demand & salary',
+      body: 'Per-role prospects, salary bands and market demand — personalized to your profile and refreshed as the market moves underneath you.',
+      to: '/map',
+      link: 'Open the map',
+      visual: <VisualDemand />,
+    },
+    {
+      header: 'Learn from how thousands moved',
+      body: 'Common trajectories, lateral shifts, career gaps and higher-study routes other people have actually taken to reach the destination you’re aiming for.',
+      to: '/map',
+      link: 'View patterns',
+      visual: <VisualPatterns />,
+    },
+  ];
 
 function FeatureSections() {
   const [active, setActive] = useState(0);
@@ -1090,9 +1094,9 @@ function FeatureSections() {
 /* Capabilities — clean text rows, no icon tiles                       */
 /* ================================================================== */
 const CAPABILITIES = [
-  ['Node detail & live demand', 'Per-node prospects, salary bands and market demand, personalized to your profile.'],
+  ['Role detail & live demand', 'Per-role prospects, salary bands and market demand, personalized to your profile.'],
   ['Historical patterns', 'Common trajectories, lateral shifts, career gaps and higher-study routes others have taken.'],
-  ['Employer positions', 'Verified companies pin open roles onto nodes, showing the paths they actually hire from.'],
+  ['Employer positions', 'Verified companies pin open roles onto career points, showing the paths they actually hire from.'],
   ['Industry & adjacency view', 'Zoom out to whole industries and the realistic bridges between them.'],
 ];
 
@@ -1142,7 +1146,7 @@ function Stats() {
     <section className="border-t border-line/10 bg-surface-2/40">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-8 gap-y-12 px-5 py-20 sm:px-8 md:grid-cols-4">
         <StatItem value={2400000} suffix="+" label="Career journeys analyzed" />
-        <StatItem value={18000} suffix="" label="Mapped nodes" />
+        <StatItem value={18000} suffix="" label="Mapped career points" />
         <StatItem value={92} suffix="%" label="Route confidence accuracy" />
         <StatItem value={3400} suffix="" label="Verified employer roles" />
       </div>
@@ -1153,119 +1157,6 @@ function Stats() {
 /* ================================================================== */
 /* CTA                                                                 */
 /* ================================================================== */
-/** Reusable rocket — decorative shape + the launch hero. */
-function RocketSVG({ size = 120 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * 1.55} viewBox="0 0 100 155" fill="none" aria-hidden>
-      <path d="M50 6 C72 22 80 60 76 102 L24 102 C20 60 28 22 50 6Z" fill="#ffffff" stroke="#17324d" strokeWidth="3.5" />
-      <path d="M24 90 L8 120 L24 108 Z" fill="#7e3041" />
-      <path d="M76 90 L92 120 L76 108 Z" fill="#7e3041" />
-      <circle cx="50" cy="48" r="14" fill="#2f7f8f" stroke="#17324d" strokeWidth="3.5" />
-      <circle cx="50" cy="48" r="6" fill="#cdeae9" />
-      <rect x="38" y="100" width="24" height="12" rx="3" fill="#17324d" />
-      <g className="rocket-flame" style={{ transformOrigin: '50px 112px' }}>
-        <path d="M38 112 L50 150 L62 112 Z" fill="#f2b95e" />
-        <path d="M44 112 L50 136 L56 112 Z" fill="#ffd98a" />
-      </g>
-    </svg>
-  );
-}
-
-const LAUNCH_CLOUDS = [
-  { l: '-8%', t: '52%', s: '46vw' },
-  { l: '22%', t: '66%', s: '42vw' },
-  { l: '48%', t: '58%', s: '52vw' },
-  { l: '74%', t: '64%', s: '44vw' },
-  { l: '4%', t: '78%', s: '44vw' },
-  { l: '40%', t: '82%', s: '46vw' },
-  { l: '68%', t: '82%', s: '42vw' },
-  { l: '-6%', t: '28%', s: '38vw' },
-  { l: '64%', t: '26%', s: '40vw' },
-  { l: '30%', t: '40%', s: '36vw' },
-];
-
-/** Full-screen rocket-launch transition that ends covered in cloud. */
-function RocketLaunch({ launching, onDone }: { launching: boolean; onDone: () => void }) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const rocketRef = useRef<HTMLDivElement>(null);
-  const skyRef = useRef<HTMLDivElement>(null);
-  const whiteRef = useRef<HTMLDivElement>(null);
-  const played = useRef(false);
-
-  useEffect(() => {
-    if (!launching || played.current) return;
-    played.current = true;
-    const overlay = overlayRef.current;
-    if (!overlay || prefersReducedMotion()) {
-      onDone();
-      return;
-    }
-    const tl = gsap.timeline({ onComplete: onDone });
-    gsap.set(overlay, { autoAlpha: 1, pointerEvents: 'auto' });
-    tl.fromTo(skyRef.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45 }, 0);
-    // rocket rises slowly so it stays on screen — gentle, near-linear incline
-    tl.fromTo(
-      rocketRef.current,
-      { yPercent: 135, rotate: -3 },
-      { yPercent: -150, rotate: 3, duration: 3, ease: 'power1.in' },
-      0.1,
-    );
-    tl.fromTo(
-      rocketRef.current,
-      { xPercent: -6 },
-      { xPercent: 6, duration: 0.7, ease: 'sine.inOut', repeat: 4, yoyo: true },
-      0.1,
-    );
-    tl.fromTo(
-      '.rocket-flame',
-      { scaleY: 0.7, autoAlpha: 0.75 },
-      { scaleY: 1.3, autoAlpha: 1, duration: 0.08, ease: 'sine.inOut', repeat: 32, yoyo: true },
-      0.1,
-    );
-    tl.fromTo(
-      '.launch-cloud',
-      { scale: 0, autoAlpha: 0 },
-      {
-        scale: 1.9,
-        autoAlpha: 1,
-        duration: 1.2,
-        ease: 'power2.out',
-        stagger: { each: 0.06, from: 'random' },
-      },
-      2.1,
-    );
-    tl.to(whiteRef.current, { autoAlpha: 1, duration: 0.55, ease: 'power1.in' }, 2.9);
-    tl.to({}, { duration: 0.2 });
-    return () => {
-      tl.kill();
-    };
-  }, [launching, onDone]);
-
-  return (
-    <div
-      ref={overlayRef}
-      className="invisible fixed inset-0 z-[100] opacity-0"
-      style={{ pointerEvents: 'none' }}
-      aria-hidden
-    >
-      <div ref={skyRef} className="absolute inset-0 bg-gradient-to-b from-[#bfe0ee] via-[#dcecf2] to-white" />
-      {LAUNCH_CLOUDS.map((c, i) => (
-        <div
-          key={i}
-          className="launch-cloud absolute rounded-full bg-white"
-          style={{ left: c.l, top: c.t, width: c.s, height: c.s }}
-        />
-      ))}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-        <div ref={rocketRef}>
-          <RocketSVG size={150} />
-        </div>
-      </div>
-      <div ref={whiteRef} className="absolute inset-0 bg-white opacity-0" />
-    </div>
-  );
-}
-
 /* Career-themed decorative shapes scattered around the launch button. */
 const SHAPE_CLS = 'cta-shape pointer-events-none absolute';
 function CtaShapes() {
