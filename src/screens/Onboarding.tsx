@@ -1,26 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { ASSESSMENT } from '@/lib/mockData';
-import { Button, Card, TextField, Logo, ProgressRing } from '@/ui/components';
+import { Button, TextField, Logo, ProgressRing } from '@/ui/components';
+import { gsap, prefersReducedMotion } from '@/lib/gsap';
 
-const STEPS = ['Background', 'Skills', 'Experience', 'Priorities', 'Create account'] as const;
+const STAGES = [
+  { key: 'name', label: 'You' },
+  { key: 'background', label: 'Background' },
+  { key: 'skills', label: 'Strengths' },
+  { key: 'experience', label: 'Experience' },
+  { key: 'priorities', label: 'Priorities' },
+  { key: 'account', label: 'Account' },
+] as const;
+const TOTAL = STAGES.length;
+
 const BASE_SKILL_COUNT = 5;
 const MAX_VISIBLE_SKILL_CHIPS = 10;
 const MAX_SELECTED_SKILLS = 10;
 
 /**
- * One-time pre-account onboarding. This is the Career State Assessment, moved
- * out of the dashboard into a standalone flow that finishes by creating the
- * account and dropping the user into the app. Reached via the rocket-launch CTA.
+ * One-time pre-account onboarding, told as a story. One prompt per screen, big
+ * editorial type, GSAP step transitions, and copy that greets the user by name
+ * so each "Continue" feels like a welcome. Finishes by creating the account and
+ * dropping into the app. Reached via the rocket-launch CTA.
  */
 export function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [computing, setComputing] = useState(false);
 
+  const [name, setName] = useState('');
   const [background, setBackground] = useState<string | null>(null);
   const [otherBackground, setOtherBackground] = useState('');
   const [skills, setSkills] = useState<Set<string>>(new Set());
@@ -28,9 +40,13 @@ export function Onboarding() {
   const [years, setYears] = useState(4);
   const [role, setRole] = useState('Frontend Engineer');
   const [priorities, setPriorities] = useState<Set<string>>(new Set(['growth', 'impact']));
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const lock = useRef(false);
+
+  const first = name.trim().split(/\s+/)[0] || 'there';
 
   const toggle = (set: Set<string>, v: string, max?: number) => {
     const next = new Set(set);
@@ -44,14 +60,16 @@ export function Onboarding() {
 
   const canNext =
     step === 0
-      ? !!background && (background !== 'other' || otherBackground.trim().length > 0)
+      ? name.trim().length > 0
       : step === 1
-        ? skills.size > 0
+        ? !!background && (background !== 'other' || otherBackground.trim().length > 0)
         : step === 2
-          ? !!role
+          ? skills.size > 0
           : step === 3
-            ? true
-            : !!name && /.+@.+\..+/.test(email) && password.length >= 6;
+            ? !!role
+            : step === 4
+              ? true
+              : /.+@.+\..+/.test(email) && password.length >= 6;
 
   const skillOptions = ASSESSMENT.skills as readonly string[];
   const visibleSkillCount = Math.min(
@@ -66,7 +84,6 @@ export function Onboarding() {
   const addCustomSkill = () => {
     const nextSkill = customSkill.trim();
     if (!nextSkill || skillLimitReached) return;
-
     setSkills((prev) => {
       if (prev.size >= MAX_SELECTED_SKILLS) return prev;
       const duplicate = Array.from(prev).some(
@@ -78,61 +95,151 @@ export function Onboarding() {
     setCustomSkill('');
   };
 
+  // animate each step in
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    lock.current = false;
+    const items = el.querySelectorAll('.story-item');
+    if (prefersReducedMotion()) {
+      gsap.set([el, ...Array.from(items)], { autoAlpha: 1, y: 0 });
+      return;
+    }
+    gsap.set(el, { autoAlpha: 1, y: 0 });
+    const tl = gsap.timeline();
+    tl.fromTo(
+      items,
+      { autoAlpha: 0, y: 28 },
+      { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.08 },
+    );
+    return () => {
+      tl.kill();
+    };
+  }, [step]);
+
   const finish = () => {
     setComputing(true);
-    setTimeout(() => navigate('/map'), 1900);
+    setTimeout(() => navigate('/map'), 2100);
   };
 
-  const progress = ((step + 1) / STEPS.length) * 100;
+  const leave = (run: () => void, dir: 1 | -1) => {
+    if (prefersReducedMotion()) {
+      run();
+      return;
+    }
+    if (lock.current) return;
+    lock.current = true;
+    gsap.to(contentRef.current, {
+      autoAlpha: 0,
+      y: dir === 1 ? -28 : 28,
+      duration: 0.3,
+      ease: 'power2.in',
+      onComplete: run,
+    });
+  };
 
-  if (computing) return <Computing />;
+  const goNext = () => {
+    if (!canNext) return;
+    if (step === TOTAL - 1) leave(finish, 1);
+    else leave(() => setStep((s) => s + 1), 1);
+  };
+  const goBack = () => {
+    if (step === 0) return;
+    leave(() => setStep((s) => s - 1), -1);
+  };
+  const onEnter = (e: { key: string; preventDefault: () => void }) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      goNext();
+    }
+  };
+
+  if (computing) return <Computing name={first} />;
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="mx-auto flex max-w-3xl items-center justify-between px-5 py-6 sm:px-6">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-canvas">
+      {/* faint backdrop */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.5]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgb(var(--c-line)/0.05) 1px,transparent 1px),linear-gradient(90deg,rgb(var(--c-line)/0.05) 1px,transparent 1px)',
+          backgroundSize: '46px 46px',
+          maskImage: 'radial-gradient(circle at 50% 40%, black, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 40%, black, transparent 75%)',
+        }}
+      />
+      <div className="pointer-events-none absolute -left-40 top-10 h-96 w-96 rounded-full bg-brand/[0.06] blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-amber/[0.06] blur-3xl" />
+
+      {/* top bar */}
+      <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
         <Link to="/" className="focus-ring rounded-lg">
           <Logo />
         </Link>
-        <span className="text-sm font-semibold text-ink-mute">
-          Step {step + 1} of {STEPS.length}
-        </span>
+        <Link
+          to="/map"
+          className="text-sm font-semibold text-ink-mute transition hover:text-ink"
+        >
+          Sign in
+        </Link>
       </header>
 
-      <div className="mx-auto max-w-3xl px-5 pb-16 sm:px-6">
-        <div className="mb-5">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.2em] text-brand">
-            Let’s set you up
-          </span>
-          <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-ink sm:text-4xl">
-            {step < 4 ? 'Find your starting point' : 'Save your results'}
-          </h1>
-          <p className="mt-1.5 text-sm text-ink-soft">
-            {step < 4
-              ? 'A one-time setup — no résumé needed. Answer what feels true today.'
-              : 'Create your account to lock in your starting point and unlock the map.'}
-          </p>
-        </div>
-
-        {/* progress */}
-        <div className="mb-6 flex gap-1.5">
-          {STEPS.map((s, i) => (
-            <span key={s} className="h-1.5 flex-1 overflow-hidden rounded-full bg-line/12">
+      {/* journey progress */}
+      <div className="relative z-10 mx-auto w-full max-w-2xl px-6 sm:px-10">
+        <div className="flex items-center gap-1.5">
+          {STAGES.map((s, i) => (
+            <span key={s.key} className="h-1 flex-1 overflow-hidden rounded-full bg-line/12">
               <span
-                className="block h-full rounded-full bg-brand transition-all duration-500"
-                style={{ width: i <= step ? '100%' : '0%' }}
+                className="block h-full rounded-full bg-brand transition-all duration-500 ease-out"
+                style={{ width: i < step ? '100%' : i === step ? '55%' : '0%' }}
               />
             </span>
           ))}
         </div>
+        <div className="mt-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
+          <span className="text-brand">{STAGES[step].label}</span>
+          <span>
+            {step + 1} / {TOTAL}
+          </span>
+        </div>
+      </div>
 
-        <Card className="p-5 sm:p-7">
+      {/* content */}
+      <main className="relative z-10 flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
+        <div ref={contentRef} className="w-full max-w-2xl">
+          {/* ---- Name ---- */}
           {step === 0 && (
-            <Step
-              title="Which path best describes your background?"
-              hint="Choose the field, training route, or work experience that most shaped your current skills."
-            >
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <>
+              <StoryHead
+                eyebrow="Welcome to CareerOS"
+                prompt="First — what should we call you?"
+                helper="No pressure. We're just getting to know each other."
+              />
+              <div className="story-item">
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={onEnter}
+                  placeholder="Type your name"
+                  className="w-full max-w-md border-b-2 border-line/20 bg-transparent pb-3 text-2xl font-bold text-ink outline-none transition-colors placeholder:text-ink-mute/40 focus:border-brand sm:text-3xl"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ---- Background ---- */}
+          {step === 1 && (
+            <>
+              <StoryHead
+                eyebrow="Chapter one"
+                greet={`Lovely to meet you, ${first}.`}
+                prompt="Where does your story begin?"
+                helper="Pick the path that shaped your current skills the most."
+              />
+              <div className="story-item space-y-4">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {ASSESSMENT.background.map((b) => {
                     const Icon = getIcon(b.icon);
                     const active = background === b.id;
@@ -141,7 +248,7 @@ export function Onboarding() {
                         key={b.id}
                         onClick={() => setBackground(b.id)}
                         className={cn(
-                          'focus-ring flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition',
+                          'focus-ring flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition',
                           active
                             ? 'border-brand bg-brand/5 shadow-soft'
                             : 'border-line/12 bg-surface hover:border-line/25',
@@ -149,14 +256,14 @@ export function Onboarding() {
                       >
                         <span
                           className={cn(
-                            'grid h-8 w-8 shrink-0 place-items-center rounded-lg',
+                            'grid h-9 w-9 shrink-0 place-items-center rounded-xl',
                             active ? 'bg-brand text-white' : 'bg-surface-2 text-ink-soft',
                           )}
                         >
-                          <Icon size={16} strokeWidth={2.1} />
+                          <Icon size={18} strokeWidth={2.1} />
                         </span>
                         <span className="flex-1 text-sm font-bold leading-snug text-ink">{b.label}</span>
-                        {active && <Icons.Check size={15} className="shrink-0 text-brand" />}
+                        {active && <Icons.Check size={16} className="shrink-0 text-brand" />}
                       </button>
                     );
                   })}
@@ -167,16 +274,23 @@ export function Onboarding() {
                     icon={Icons.Shapes}
                     value={otherBackground}
                     onChange={(e) => setOtherBackground(e.target.value)}
+                    onKeyDown={onEnter}
                     placeholder="e.g. healthcare, education, trades, finance"
                   />
                 )}
               </div>
-            </Step>
+            </>
           )}
 
-          {step === 1 && (
-            <Step title="Which skills are you strongest in?" hint="Choose up to 10, or add your own.">
-              <div className="space-y-4">
+          {/* ---- Skills ---- */}
+          {step === 2 && (
+            <>
+              <StoryHead
+                eyebrow="Your strengths"
+                prompt={`What are you great at, ${first}?`}
+                helper="Choose everything you'd confidently bring to a team — up to 10, or add your own."
+              />
+              <div className="story-item space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {visibleSkills.map((s) => {
                     const active = skills.has(s);
@@ -187,7 +301,7 @@ export function Onboarding() {
                         onClick={() => setSkills((prev) => toggle(prev, s, MAX_SELECTED_SKILLS))}
                         disabled={disabled}
                         className={cn(
-                          'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition',
+                          'focus-ring inline-flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition',
                           active
                             ? 'border-brand bg-brand/10 text-brand'
                             : 'border-line/15 bg-surface text-ink-soft hover:border-line/30',
@@ -206,7 +320,7 @@ export function Onboarding() {
                       <button
                         key={skill}
                         onClick={() => setSkills((prev) => toggle(prev, skill))}
-                        className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition"
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-4 py-2.5 text-sm font-semibold text-brand transition"
                       >
                         {skill}
                         <Icons.X size={13} />
@@ -239,17 +353,24 @@ export function Onboarding() {
                   </Button>
                 </div>
               </div>
-            </Step>
+            </>
           )}
 
-          {step === 2 && (
-            <Step title="A little about your experience" hint="Helps us place you precisely.">
-              <div className="space-y-5">
+          {/* ---- Experience ---- */}
+          {step === 3 && (
+            <>
+              <StoryHead
+                eyebrow="Where you stand"
+                prompt="And where are you right now?"
+                helper="A current role and a rough sense of time — that's plenty."
+              />
+              <div className="story-item space-y-6">
                 <TextField
                   label="Current or most recent role"
                   icon={Icons.Briefcase}
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
+                  onKeyDown={onEnter}
                   placeholder="e.g. Frontend Engineer"
                 />
                 <div>
@@ -272,12 +393,18 @@ export function Onboarding() {
                   </div>
                 </div>
               </div>
-            </Step>
+            </>
           )}
 
-          {step === 3 && (
-            <Step title="What matters most right now?" hint="Pick up to 3.">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* ---- Priorities ---- */}
+          {step === 4 && (
+            <>
+              <StoryHead
+                eyebrow="What you're chasing"
+                prompt={`What matters most to you, ${first}?`}
+                helper="Pick up to three. This shapes the routes we'll suggest."
+              />
+              <div className="story-item grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {ASSESSMENT.priorities.map((p) => {
                   const Icon = getIcon(p.icon);
                   const active = priorities.has(p.id);
@@ -286,7 +413,7 @@ export function Onboarding() {
                       key={p.id}
                       onClick={() => setPriorities((prev) => toggle(prev, p.id, 3))}
                       className={cn(
-                        'focus-ring flex items-center gap-3 rounded-2xl border p-3.5 text-left transition',
+                        'focus-ring flex items-center gap-3 rounded-2xl border p-4 text-left transition',
                         active ? 'border-brand bg-brand/5' : 'border-line/12 bg-surface hover:border-line/25',
                       )}
                     >
@@ -304,25 +431,26 @@ export function Onboarding() {
                   );
                 })}
               </div>
-            </Step>
+            </>
           )}
 
-          {step === 4 && (
-            <Step title="Create your account" hint="Almost there — your starting point is ready to save.">
-              <div className="space-y-4">
+          {/* ---- Account ---- */}
+          {step === 5 && (
+            <>
+              <StoryHead
+                eyebrow="One last thing"
+                greet={`You're all set, ${first}.`}
+                prompt="Let's save your map."
+                helper="Create your account to lock in your starting point and see your first route."
+              />
+              <div className="story-item space-y-4">
                 <TextField
-                  label="Full name"
-                  icon={Icons.User}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ada Lovelace"
-                />
-                <TextField
-                  label="Work email"
+                  label="Email"
                   icon={Icons.Search}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={onEnter}
                   placeholder="you@company.com"
                 />
                 <TextField
@@ -331,71 +459,88 @@ export function Onboarding() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={onEnter}
                   placeholder="At least 6 characters"
                   hint="Minimum 6 characters."
                 />
               </div>
-            </Step>
+            </>
           )}
 
-          <div className="mt-7 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              icon={Icons.ArrowLeft}
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
-              disabled={step === 0}
-            >
-              Back
-            </Button>
-            {step < STEPS.length - 1 ? (
-              <Button iconRight={Icons.ArrowRight} disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
+          {/* nav */}
+          <div className="story-item mt-10 flex items-center gap-3">
+            {step > 0 && (
+              <Button variant="ghost" icon={Icons.ArrowLeft} onClick={goBack}>
+                Back
+              </Button>
+            )}
+            {step < TOTAL - 1 ? (
+              <Button
+                size="lg"
+                iconRight={Icons.ArrowRight}
+                disabled={!canNext}
+                onClick={goNext}
+                className="ml-auto"
+              >
                 Continue
               </Button>
             ) : (
-              <Button icon={Icons.Sparkles} disabled={!canNext} onClick={finish}>
-                Create account
+              <Button
+                size="lg"
+                icon={Icons.Sparkles}
+                disabled={!canNext}
+                onClick={goNext}
+                className="ml-auto"
+              >
+                Create my account
               </Button>
             )}
           </div>
-        </Card>
-
-        <p className="mt-5 text-center text-sm text-ink-mute">
-          Already have an account?{' '}
-          <Link to="/map" className="font-semibold text-brand hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
 
-function Step({
-  title,
-  hint,
-  children,
+function StoryHead({
+  eyebrow,
+  greet,
+  prompt,
+  helper,
 }: {
-  title: string;
-  hint?: string;
-  children: ReactNode;
+  eyebrow: string;
+  greet?: string;
+  prompt: ReactNode;
+  helper?: string;
 }) {
   return (
-    <div className="animate-fade-up">
-      <h2 className="text-lg font-bold text-ink">{title}</h2>
-      {hint && <p className="mb-5 mt-1 text-sm text-ink-mute">{hint}</p>}
-      {children}
+    <div className="mb-8">
+      <span className="story-item block text-[12px] font-bold uppercase tracking-[0.2em] text-brand">
+        {eyebrow}
+      </span>
+      {greet && (
+        <p className="story-item mt-3 text-lg font-medium text-ink-soft sm:text-xl">{greet}</p>
+      )}
+      <h1 className="story-item mt-2 font-display text-4xl font-black leading-[1.05] tracking-[-0.02em] text-ink sm:text-5xl">
+        {prompt}
+      </h1>
+      {helper && (
+        <p className="story-item mt-4 max-w-xl text-base leading-relaxed text-ink-soft">{helper}</p>
+      )}
     </div>
   );
 }
 
-function Computing() {
+function Computing({ name }: { name: string }) {
   return (
     <div className="grid min-h-screen place-items-center bg-canvas p-6 text-center">
-      <div>
+      <div className="animate-fade-up">
         <div className="mx-auto flex justify-center">
           <ProgressRing value={100} sublabel="setting up" size={140} tone="brand" />
         </div>
-        <h2 className="mt-6 font-display text-2xl font-extrabold text-ink">Building your map…</h2>
+        <h2 className="mt-6 font-display text-2xl font-extrabold text-ink">
+          Building your map, {name}…
+        </h2>
         <p className="mt-1.5 text-sm text-ink-soft">
           Placing your starting point and routing your first move.
         </p>
