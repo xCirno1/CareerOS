@@ -1,22 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
+import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
 import {
   useScrollLerp,
   useInView,
   useCountUp,
   useReducedMotion,
+  useMediaQuery,
 } from '@/lib/hooks';
-import { clamp01, lerp, smoothstep, subProgress, bandOpacity } from '@/lib/math';
-import {
-  NODES,
-  EDGES,
-  getNode,
-  CURRENT_NODE_ID,
-  TARGET_NODE_ID,
-} from '@/lib/mockData';
-import { Button, Logo, ThemeToggle, Badge, Reveal } from '@/ui/components';
+import { clamp01, lerp, smoothstep, bandOpacity } from '@/lib/math';
+import { getNode } from '@/lib/mockData';
+import { Button, Logo, ThemeToggle, Reveal } from '@/ui/components';
 
 const ACCENT_HEX: Record<string, string> = {
   teal: '#2f7f8f',
@@ -25,13 +22,152 @@ const ACCENT_HEX: Record<string, string> = {
   navy: '#17324d',
 };
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Shared SVG primitive: a labelled graph node "chip"                  */
+/* Looks like a real node in a flow/graph editor — not a bare circle.  */
+/* ================================================================== */
+type ChipState = 'dim' | 'idle' | 'active' | 'current' | 'target';
+
+function NodeChip({
+  x,
+  y,
+  label,
+  accent,
+  state = 'idle',
+  tag,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  accent: keyof typeof ACCENT_HEX | string;
+  state?: ChipState;
+  tag?: string;
+}) {
+  const w = Math.max(108, label.length * 7.4 + 48);
+  const h = 38;
+  const left = x - w / 2;
+  const top = y - h / 2;
+  const hex = ACCENT_HEX[accent] ?? ACCENT_HEX.navy;
+  const hi = state === 'active' || state === 'current' || state === 'target';
+  const ringHex =
+    state === 'current' ? ACCENT_HEX.teal : state === 'target' ? ACCENT_HEX.amber : hex;
+
+  return (
+    <g style={{ opacity: state === 'dim' ? 0.38 : 1, transition: 'opacity .35s ease' }}>
+      {tag && (
+        <g>
+          <rect
+            x={left}
+            y={top - 24}
+            width={tag.length * 6.6 + 16}
+            height={17}
+            rx={5}
+            fill={ringHex}
+          />
+          <text
+            x={left + 8}
+            y={top - 15.5}
+            fontSize={9.5}
+            fontWeight={700}
+            letterSpacing={1.2}
+            fill="#fff"
+          >
+            {tag.toUpperCase()}
+          </text>
+        </g>
+      )}
+      <rect
+        x={left}
+        y={top}
+        width={w}
+        height={h}
+        rx={11}
+        fill="rgb(var(--c-surface))"
+        stroke={hi ? ringHex : 'rgb(var(--c-line))'}
+        strokeOpacity={hi ? 1 : 0.16}
+        strokeWidth={hi ? 2 : 1.4}
+        style={hi ? { filter: `drop-shadow(0 8px 18px ${hex}30)` } : undefined}
+      />
+      <circle cx={left + 18} cy={y} r={5} fill={hex} />
+      {state === 'current' || state === 'target' ? (
+        <circle cx={left + 18} cy={y} r={5} fill="none" stroke={ringHex} strokeWidth={2} />
+      ) : null}
+      <text
+        x={left + 32}
+        y={y}
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={600}
+        fill="rgb(var(--c-ink))"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
+/* ================================================================== */
+/* GSAP helpers                                                        */
+/* ================================================================== */
+/** Slim scroll-progress bar pinned to the very top of the page. */
+function ScrollProgress() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => gsap.set(el, { scaleX: self.progress }),
+    });
+    return () => st.kill();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className="fixed inset-x-0 top-0 z-[60] h-[3px] origin-left scale-x-0 bg-gradient-to-r from-brand to-accent"
+    />
+  );
+}
+
+/** Wraps a target so it eases toward the cursor — a "magnetic" button feel. */
+function Magnetic({ children, strength = 0.4, className }: { children: ReactNode; strength?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReducedMotion()) return;
+    const xTo = gsap.quickTo(el, 'x', { duration: 0.5, ease: 'power3.out' });
+    const yTo = gsap.quickTo(el, 'y', { duration: 0.5, ease: 'power3.out' });
+    const onMove = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      xTo((e.clientX - (r.left + r.width / 2)) * strength);
+      yTo((e.clientY - (r.top + r.height / 2)) * strength);
+    };
+    const onLeave = () => {
+      xTo(0);
+      yTo(0);
+    };
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      el.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [strength]);
+  return (
+    <div ref={ref} className={cn('inline-block', className)}>
+      {children}
+    </div>
+  );
+}
+
+/* ================================================================== */
 /* Marketing top nav                                                   */
-/* ------------------------------------------------------------------ */
-function MarketingNav() {
+/* ================================================================== */
+function MarketingNav({ hidden = false }: { hidden?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -40,37 +176,46 @@ function MarketingNav() {
     <header
       className={cn(
         'fixed inset-x-0 top-0 z-50 transition-all duration-300',
-        scrolled
-          ? 'border-b border-line/10 bg-canvas/80 backdrop-blur-xl'
-          : 'border-b border-transparent',
+        hidden && '-translate-y-full opacity-0',
+        scrolled ? 'border-b border-line/10 bg-canvas/85 backdrop-blur-md' : 'border-b border-transparent',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
-        <Link to="/" className="focus-ring rounded-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5 sm:px-8">
+        <Link to="/" className="focus-ring rounded-lg">
           <Logo />
         </Link>
-        <nav className="ml-6 hidden items-center gap-1 md:flex">
-          {['Product', 'Traileers', 'Employers', 'Pricing'].map((l) => (
+        <nav className="hidden items-center gap-6 lg:flex">
+          {[
+            ['Product', true],
+            ['Solutions', true],
+            ['Community', true],
+            ['Resources', true],
+            ['Pricing', false],
+          ].map(([l, caret]) => (
             <a
-              key={l}
+              key={l as string}
               href="#features"
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-line/5 hover:text-ink"
+              className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
             >
               {l}
+              {caret && <Icons.ChevronDown size={15} className="text-ink-mute" strokeWidth={2.4} />}
             </a>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2.5">
           <ThemeToggle />
-          <Link to="/map" className="hidden sm:block">
-            <Button variant="ghost" size="sm">
-              Sign in
-            </Button>
+          <Link to="/map" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
+            Log in
           </Link>
-          <Link to="/map">
-            <Button size="sm" iconRight={Icons.ArrowRight}>
-              Open app
-            </Button>
+          <Link to="/map" className="hidden sm:block">
+            <button className="focus-ring h-10 rounded-full border border-line/25 px-5 text-[15px] font-semibold text-ink transition hover:border-line/50">
+              Contact sales
+            </button>
+          </Link>
+          <Link to="/onboarding">
+            <button className="focus-ring h-10 rounded-full bg-navy px-5 text-[15px] font-semibold text-white transition hover:bg-navy-600 dark:bg-brand dark:text-navy dark:hover:bg-teal-soft">
+              Get started
+            </button>
           </Link>
         </div>
       </div>
@@ -78,220 +223,418 @@ function MarketingNav() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Hero floating node-graph backdrop                                   */
-/* ------------------------------------------------------------------ */
-function HeroBackdrop({ parallax }: { parallax: number }) {
-  // a few decorative nodes positioned in %; float independently
-  const nodes = [
-    { x: 12, y: 24, d: 56, accent: 'teal', icon: Icons.Compass, delay: 0 },
-    { x: 82, y: 18, d: 64, accent: 'amber', icon: Icons.TrendingUp, delay: 1.1 },
-    { x: 70, y: 64, d: 72, accent: 'wine', icon: Icons.Target, delay: 0.6 },
-    { x: 22, y: 70, d: 50, accent: 'navy', icon: Icons.Briefcase, delay: 1.6 },
-    { x: 46, y: 12, d: 44, accent: 'teal', icon: Icons.Sparkles, delay: 0.3 },
-    { x: 90, y: 46, d: 40, accent: 'navy', icon: Icons.GraduationCap, delay: 2 },
-  ];
+/* ================================================================== */
+/* Eyebrow — plain letterspaced label, no icon chip                    */
+/* ================================================================== */
+function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-brand',
+        className,
+      )}
+    >
+      <span className="h-px w-6 bg-current opacity-50" />
+      {children}
+    </span>
+  );
+}
+
+/* ================================================================== */
+/* Hero — Figma-style: a scrolling gallery of product "thumbnails"      */
+/* behind a floating headline card, with carousel controls.            */
+/* ================================================================== */
+function Spark({ vals, w, h, stroke }: { vals: number[]; w: number; h: number; stroke: string }) {
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h - v * h}`).join(' ');
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <polyline points={pts} fill="none" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={w} cy={h - vals[vals.length - 1] * h} r={3} fill={stroke} />
+    </svg>
+  );
+}
+
+function CardFrame({
+  className,
+  label,
+  children,
+}: {
+  className?: string;
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-      style={{ transform: `translateY(${parallax * 40}px)` }}
+      className={cn(
+        'flex h-full w-full select-none flex-col overflow-hidden rounded-[20px] p-5 shadow-[0_18px_50px_-12px_rgba(16,33,50,0.45)] ring-1 ring-black/5',
+        className,
+      )}
     >
-      {/* glow blobs */}
-      <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-brand/20 blur-3xl" />
-      <div className="absolute -right-24 top-32 h-80 w-80 rounded-full bg-amber/20 blur-3xl" />
-      <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-wine/10 blur-3xl" />
-      {/* connecting lines */}
-      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
-        <line x1="14%" y1="28%" x2="48%" y2="16%" className="stroke-line/15" strokeWidth="1.5" />
-        <line x1="48%" y1="16%" x2="84%" y2="22%" className="stroke-line/15" strokeWidth="1.5" />
-        <line x1="84%" y1="22%" x2="72%" y2="66%" className="stroke-line/15" strokeWidth="1.5" />
-        <line x1="24%" y1="72%" x2="72%" y2="66%" className="stroke-line/15" strokeWidth="1.5" />
-        <line x1="14%" y1="28%" x2="24%" y2="72%" className="stroke-line/15" strokeWidth="1.5" />
-      </svg>
-      {nodes.map((n, i) => {
-        const Icon = n.icon;
-        return (
-          <div
-            key={i}
-            className="absolute grid animate-float place-items-center rounded-2xl border border-line/10 bg-surface/70 shadow-glass backdrop-blur-md"
-            style={{
-              left: `${n.x}%`,
-              top: `${n.y}%`,
-              width: n.d,
-              height: n.d,
-              animationDelay: `${n.delay}s`,
-              color: ACCENT_HEX[n.accent],
-            }}
-          >
-            <Icon size={n.d * 0.4} strokeWidth={2} />
-          </div>
-        );
-      })}
+      <span className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-60">{label}</span>
+      <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Story stage — the scroll-lerp cinematic map build                   */
-/* ------------------------------------------------------------------ */
+/* Each card is a distinct, vivid CareerOS "surface" — like Figma's row of
+   real-site thumbnails. Fixed colors so they read the same in light/dark. */
+const GALLERY: ReactNode[] = [
+  // Assessment (navy)
+  <CardFrame key="assess" label="Assessment" className="bg-navy text-white">
+    <p className="font-display text-xl font-extrabold leading-tight">Where are you, really?</p>
+    <div className="mt-auto flex flex-wrap gap-2 pt-4">
+      {['Self-taught', 'Fast growth', 'Remote', 'React', 'Design'].map((c) => (
+        <span key={c} className="rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold text-white/90">
+          {c}
+        </span>
+      ))}
+    </div>
+  </CardFrame>,
+
+  // Map (mint)
+  <CardFrame key="map" label="Traileers map" className="bg-[#e7f1ec] text-navy">
+    <svg viewBox="0 0 220 230" className="flex-1" preserveAspectRatio="xMidYMid meet">
+      <line x1="40" y1="60" x2="120" y2="40" stroke="#17324d" strokeOpacity="0.18" strokeWidth="2" />
+      <line x1="120" y1="40" x2="180" y2="120" stroke="#17324d" strokeOpacity="0.18" strokeWidth="2" />
+      <line x1="40" y1="60" x2="90" y2="160" stroke="#17324d" strokeOpacity="0.18" strokeWidth="2" />
+      <path d="M40,60 L90,160 L180,120" fill="none" stroke="#f2b95e" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      {[
+        [40, 60, '#2f7f8f'],
+        [120, 40, '#7e3041'],
+        [90, 160, '#2f7f8f'],
+        [180, 120, '#f2b95e'],
+      ].map(([x, y, c], i) => (
+        <circle key={i} cx={x as number} cy={y as number} r="11" fill="#fff" stroke={c as string} strokeWidth="3.5" />
+      ))}
+      <text x="40" y="92" textAnchor="middle" fontSize="12" fontWeight="700" fill="#17324d">You</text>
+      <text x="180" y="152" textAnchor="middle" fontSize="12" fontWeight="700" fill="#17324d">Target</text>
+    </svg>
+  </CardFrame>,
+
+  // Feasibility (wine → amber)
+  <CardFrame key="feas" label="Feasibility" className="bg-gradient-to-br from-wine to-amber text-white">
+    <div className="mt-auto">
+      <p className="font-display text-6xl font-black leading-none">74%</p>
+      <p className="mt-2 text-sm font-semibold text-white/90">Strong route to Product Lead</p>
+      <p className="mt-1 text-xs text-white/70">Frontend → Analyst → Product</p>
+    </div>
+  </CardFrame>,
+
+  // Node detail (white)
+  <CardFrame key="node" label="Node detail" className="bg-white text-navy">
+    <p className="font-display text-2xl font-extrabold">Product Lead</p>
+    <div className="mt-3 space-y-2 text-sm">
+      <div className="flex justify-between"><span className="opacity-60">Salary</span><span className="font-bold">$145–210k</span></div>
+      <div className="flex justify-between"><span className="opacity-60">Demand</span><span className="font-bold text-[#2f7f8f]">Surging</span></div>
+      <div className="flex justify-between"><span className="opacity-60">Match</span><span className="font-bold">54%</span></div>
+    </div>
+    <div className="mt-auto pt-4">
+      <Spark vals={[0.3, 0.45, 0.4, 0.6, 0.72, 0.9]} w={150} h={40} stroke="#2f7f8f" />
+    </div>
+  </CardFrame>,
+
+  // Patterns (teal)
+  <CardFrame key="pat" label="Historical patterns" className="bg-[#2f7f8f] text-white">
+    <div className="mt-auto space-y-3">
+      {[
+        ['Frontend → Full-Stack → Product', 31],
+        ['Frontend → Analyst → Product', 22],
+        ['Frontend → Design Eng → Product', 14],
+      ].map(([l, v]) => (
+        <div key={l as string}>
+          <div className="flex justify-between text-xs font-semibold text-white/90">
+            <span className="truncate pr-2">{l}</span>
+            <span>{v}%</span>
+          </div>
+          <div className="mt-1 h-1.5 rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-white" style={{ width: `${(v as number) * 2.2}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  </CardFrame>,
+
+  // Demand (amber)
+  <CardFrame key="dem" label="Live demand" className="bg-amber text-navy">
+    <div className="mt-auto">
+      <p className="font-display text-5xl font-black leading-none">+28%</p>
+      <p className="mt-2 text-sm font-bold">Design Engineer demand</p>
+      <div className="mt-3">
+        <Spark vals={[0.3, 0.38, 0.5, 0.6, 0.74, 0.95]} w={150} h={36} stroke="#17324d" />
+      </div>
+    </div>
+  </CardFrame>,
+
+  // Testimonial (wine)
+  <CardFrame key="quote" label="From the field" className="bg-wine text-white">
+    <p className="font-display text-[17px] font-semibold leading-snug">
+      “CareerOS mapped a route from frontend to PM I didn’t know existed — with the odds to back
+      every step.”
+    </p>
+    <div className="mt-auto flex items-center gap-3 pt-5">
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-white/15 text-sm font-bold">
+        JL
+      </span>
+      <div className="text-xs leading-tight">
+        <p className="font-bold">Jordan Lee</p>
+        <p className="opacity-70">Product Lead, Meridian</p>
+      </div>
+    </div>
+  </CardFrame>,
+];
+
+function Hero() {
+  const reduced = useReducedMotion();
+  const lg = useMediaQuery('(min-width: 1024px)');
+  const cardW = lg ? 290 : 210;
+  const gap = 18;
+  const step = cardW + gap;
+  const cardH = Math.round(cardW * 1.42);
+  const [paused, setPaused] = useState(false);
+
+  // Continuous marquee: two identical copies, animate the track -50% forever.
+  const track = [...GALLERY, ...GALLERY];
+  const duration = (GALLERY.length * step) / 50; // ~150px/s
+
+  return (
+    <section className="relative overflow-hidden pb-16 pt-24 sm:pt-28">
+      {/* gallery row (full-bleed; cards cut off at the screen edges) */}
+      <div className="relative" style={{ height: cardH }}>
+        <div
+          className="flex w-max will-change-transform"
+          style={{
+            animation: reduced ? undefined : `marquee ${duration}s linear infinite`,
+            animationPlayState: paused ? 'paused' : 'running',
+          }}
+        >
+          {track.map((card, i) => (
+            <div key={i} style={{ width: cardW, height: cardH, marginRight: gap }} className="shrink-0">
+              {card}
+            </div>
+          ))}
+        </div>
+
+        {/* floating headline card */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4">
+          <Reveal direction="scale" className="pointer-events-auto w-full max-w-2xl">
+            <div className="rounded-[28px] bg-surface p-7 shadow-[0_30px_80px_-20px_rgba(16,33,50,0.55)] ring-1 ring-line/10 sm:p-10">
+              <h1 className="font-display text-4xl font-black leading-[1.05] tracking-[-0.02em] text-ink sm:text-6xl">
+                Navigate your career
+                <br />
+                like a <span className="text-brand">map.</span>
+              </h1>
+              <div className="mt-6 flex items-end justify-between gap-4">
+                <p className="hidden max-w-xs text-sm text-ink-mute sm:block">
+                  Find your node. See the route. Move with the odds.
+                </p>
+                <Magnetic className="ml-auto">
+                  <Link to="/onboarding">
+                    <Button size="lg" iconRight={Icons.ArrowRight}>
+                      Find my node
+                    </Button>
+                  </Link>
+                </Magnetic>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+
+        {/* pause / play */}
+        <button
+          onClick={() => setPaused((p) => !p)}
+          aria-label={paused ? 'Play' : 'Pause'}
+          className="focus-ring absolute bottom-3 right-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-line/15 bg-surface/90 text-ink backdrop-blur transition hover:border-line/35 sm:right-8"
+        >
+          {paused ? <Icons.Play size={17} /> : <Icons.Pause size={17} />}
+        </button>
+      </div>
+
+      {/* subhead */}
+      <div className="mx-auto mt-12 max-w-2xl px-5 text-center">
+        <p className="text-xl font-medium leading-relaxed text-ink sm:text-2xl">
+          CareerOS turns the entire job landscape into one interactive map. Find your node,
+          design, and route your next move with confidence.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Logo / trust strip                                                  */
+/* ================================================================== */
+function TrustStrip() {
+  const names = ['Northwind', 'Acre Labs', 'Vantage', 'Meridian', 'Lumen', 'Foundry'];
+  return (
+    <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-ink-mute">
+        Hiring teams routing talent with CareerOS
+      </p>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+        {names.map((n) => (
+          <span
+            key={n}
+            className="font-display text-lg font-bold tracking-tight text-ink-mute/70"
+          >
+            {n}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Story stage — scroll-lerp cinematic map build                       */
+/* ================================================================== */
 const STORY = [
   {
-    badge: 'Career State Assessment',
-    title: 'This is you, today.',
-    body: 'CareerOS pinpoints your exact node from your background, skills and the work you’ve actually shipped.',
-    icon: Icons.Crosshair,
+    step: '01',
+    label: 'Your starting node',
+    title: 'Start from where you really are.',
+    body: 'CareerOS places you on a single node — inferred from your background, skills and the work you’ve actually shipped.',
   },
   {
-    badge: 'The Traileers™ map',
-    title: 'Every realistic move, mapped.',
-    body: 'Jobs, careers and industries become nodes — connected by transitions real people have made.',
-    icon: Icons.Network,
+    step: '02',
+    label: 'One connected step',
+    title: 'Each role links to the next realistic move.',
+    body: 'No leaps. Every node connects to the one above it by a transition real people have actually made.',
   },
   {
-    badge: 'Dynamic routing',
-    title: 'We draw the route with the best odds.',
-    body: 'Tradeoffs, qualifications and your interests resolve into one recommended path to your target.',
-    icon: Icons.Route,
+    step: '03',
+    label: 'Always climbing',
+    title: 'We route you toward higher opportunity.',
+    body: 'The path keeps moving up — more scope, more compensation, more leverage — one feasible hop at a time.',
   },
   {
-    badge: 'Feasibility engine',
-    title: 'Backed by how thousands got there.',
-    body: 'Every step is scored against historical trajectories — so the plan is grounded in evidence, not vibes.',
-    icon: Icons.Gauge,
+    step: '04',
+    label: 'Backed by evidence',
+    title: 'Every step scored on how thousands moved.',
+    body: 'Each hop carries honest odds and a typical timeline, grounded in historical trajectories — not vibes.',
   },
 ];
 
+/** A single ascending chain — bottom node is "you", each step climbs higher. */
+const LADDER: {
+  title: string;
+  sub: string;
+  accent: string;
+  x: number;
+  y: number;
+  opp: number;
+  tag?: string;
+}[] = [
+    { title: 'Frontend Engineer', sub: '$95–140k', accent: 'teal', x: 340, y: 1040, opp: 117, tag: 'You' },
+    { title: 'Full-Stack Engineer', sub: '$110–165k', accent: 'teal', x: 580, y: 820, opp: 137 },
+    { title: 'Product Analyst', sub: '$120–170k', accent: 'wine', x: 400, y: 600, opp: 145 },
+    { title: 'Product Lead', sub: '$145–210k', accent: 'amber', x: 610, y: 380, opp: 177, tag: 'Target' },
+    { title: 'Director of Product', sub: '$210–300k', accent: 'navy', x: 470, y: 160, opp: 255 },
+  ];
+
 function StoryStage() {
-  const reduced = useReducedMotion();
   const { stageRef, progress } = useScrollLerp(0.12);
+  const N = LADDER.length;
 
-  const current = getNode(CURRENT_NODE_ID)!;
-  const target = getNode(TARGET_NODE_ID)!;
-
-  // camera pans horizontally from current node to target node
   const eased = smoothstep(progress);
-  const focusX = lerp(current.x, target.x, eased);
-  const focusY = lerp(current.y + 20, target.y, eased);
-  const scale = lerp(1.18, 1.32, eased);
-  const tx = 500 - focusX * scale;
-  const ty = 340 - focusY * scale;
+  const reach = eased * (N - 1); // how far up the chain we've climbed
 
-  const edgesIn = subProgress(progress, 0.22, 0.5);
-  const routeDrawn = subProgress(progress, 0.48, 0.84);
-  const feasIn = subProgress(progress, 0.82, 0.98);
+  // camera climbs from the bottom node to the top node
+  const focusY = lerp(LADDER[0].y, LADDER[N - 1].y, eased);
+  const tx = 500 - 480;
+  const ty = 340 - focusY;
 
-  // recommended route nodes light up sequentially
-  const routePath = ['frontend-dev', 'data-analyst', 'product-lead'];
-  const routeThresholds: Record<string, number> = {
-    'frontend-dev': 0,
-    'data-analyst': 0.45,
-    'product-lead': 0.7,
-  };
-  const routePoints = routePath.map((id) => getNode(id)!);
-  const routeD = routePoints
-    .map((n, i) => `${i === 0 ? 'M' : 'L'}${n.x},${n.y}`)
-    .join(' ');
+  const routeD = LADDER.map((n, i) => `${i === 0 ? 'M' : 'L'}${n.x},${n.y}`).join(' ');
+  const drawn = clamp01(reach / (N - 1));
 
-  const feas = useCountUp(74, feasIn > 0.1, 900);
+  // live "opportunity" number that climbs with the camera
+  const lo = Math.min(N - 1, Math.floor(reach));
+  const hi = Math.min(N - 1, lo + 1);
+  const oppNow = useCountUp(
+    Math.round(lerp(LADDER[lo].opp, LADDER[hi].opp, reach - lo)),
+    true,
+    180,
+  );
+  const reached = LADDER[Math.min(N - 1, Math.round(reach))];
 
   return (
-    <section ref={stageRef} className="relative h-[420vh]">
+    <section ref={stageRef} className="relative h-[440vh]">
       <div className="welcome-stage sticky top-0 h-screen overflow-hidden">
-        {/* subtle grid */}
         <div
-          className="absolute inset-0 opacity-[0.5]"
+          className="absolute inset-0 opacity-[0.55]"
           style={{
             backgroundImage:
               'linear-gradient(rgb(var(--c-line)/0.05) 1px,transparent 1px),linear-gradient(90deg,rgb(var(--c-line)/0.05) 1px,transparent 1px)',
-            backgroundSize: '46px 46px',
+            backgroundSize: '44px 44px',
           }}
         />
 
-        {/* the map */}
         <svg
           viewBox="0 0 1000 680"
           className="absolute inset-0 h-full w-full"
           preserveAspectRatio="xMidYMid slice"
         >
-          <g
-            transform={`translate(${tx} ${ty}) scale(${scale})`}
-            style={{ transition: reduced ? undefined : 'none' }}
-          >
-            {/* all edges */}
-            {EDGES.map((e, i) => {
-              const a = getNode(e.from)!;
-              const b = getNode(e.to)!;
-              return (
-                <line
-                  key={i}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke="rgb(var(--c-line))"
-                  strokeOpacity={0.18 * edgesIn}
-                  strokeWidth={1.4}
-                />
-              );
-            })}
-
-            {/* recommended route (draws in) */}
+          <g transform={`translate(${tx} ${ty})`}>
+            {/* the single connecting line, drawing upward as you climb */}
+            <path
+              d={routeD}
+              fill="none"
+              stroke="rgb(var(--c-line))"
+              strokeOpacity={0.14}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
             <path
               d={routeD}
               fill="none"
               stroke={ACCENT_HEX.amber}
-              strokeWidth={4}
+              strokeWidth={4.5}
               strokeLinecap="round"
               strokeLinejoin="round"
               pathLength={1}
               strokeDasharray={1}
-              strokeDashoffset={1 - routeDrawn}
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(242,185,94,0.5))' }}
+              strokeDashoffset={1 - drawn}
+              style={{ filter: 'drop-shadow(0 2px 10px rgba(242,185,94,0.5))' }}
             />
 
-            {/* nodes */}
-            {NODES.map((n) => {
-              const isCurrent = n.id === CURRENT_NODE_ID;
-              const isTarget = n.id === TARGET_NODE_ID;
-              const onRoute = n.id in routeThresholds;
-              const active = onRoute ? progress >= routeThresholds[n.id] : false;
-              const r = isCurrent || isTarget ? 30 : 22;
+            {LADDER.map((n, i) => {
+              const lit = reach >= i - 0.25;
+              const near = reach >= i - 1.3;
+              const isTarget = n.tag === 'Target';
+              const state: ChipState =
+                i === 0
+                  ? 'current'
+                  : isTarget
+                    ? lit
+                      ? 'target'
+                      : near
+                        ? 'idle'
+                        : 'dim'
+                    : lit
+                      ? 'active'
+                      : near
+                        ? 'idle'
+                        : 'dim';
               return (
-                <g key={n.id}>
-                  {(isCurrent || isTarget) && (
-                    <circle
-                      cx={n.x}
-                      cy={n.y}
-                      r={r}
-                      fill="none"
-                      stroke={isTarget ? ACCENT_HEX.amber : ACCENT_HEX.teal}
-                      strokeWidth={2}
-                      className={reduced ? '' : 'animate-pulse-ring'}
-                      style={{ transformOrigin: `${n.x}px ${n.y}px`, opacity: active ? 1 : 0.2 }}
-                    />
-                  )}
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r={r}
-                    fill="rgb(var(--c-surface))"
-                    stroke={ACCENT_HEX[n.accent]}
-                    strokeWidth={active ? 3.5 : 2}
-                    style={{
-                      opacity: active ? 1 : lerp(0.35, 0.6, edgesIn),
-                      transition: 'opacity 0.2s',
-                    }}
+                <g key={n.title}>
+                  <NodeChip
+                    x={n.x}
+                    y={n.y}
+                    label={n.title}
+                    accent={n.accent}
+                    state={state}
+                    tag={i === 0 ? 'You' : isTarget && lit ? 'Target' : undefined}
                   />
                   <text
                     x={n.x}
-                    y={n.y + r + 16}
+                    y={n.y + 32}
                     textAnchor="middle"
-                    fontSize={13}
-                    fontWeight={700}
-                    fill="rgb(var(--c-ink))"
-                    style={{ opacity: active ? 1 : 0.45 }}
+                    fontSize={12.5}
+                    fontWeight={600}
+                    fill="rgb(var(--c-ink-soft))"
+                    style={{ opacity: state === 'dim' ? 0.35 : 1, transition: 'opacity .35s' }}
                   >
-                    {n.title}
+                    {n.sub}
                   </text>
                 </g>
               );
@@ -299,46 +642,48 @@ function StoryStage() {
           </g>
         </svg>
 
-        {/* feasibility chip */}
-        <div
-          className="absolute right-6 top-24 hidden rounded-3xl border border-line/10 bg-surface/85 p-5 shadow-glass backdrop-blur-xl sm:block"
-          style={{ opacity: feasIn, transform: `translateY(${(1 - feasIn) * 16}px)` }}
-        >
-          <p className="eyebrow">Feasibility</p>
-          <div className="mt-1 flex items-end gap-2">
-            <span className="text-4xl font-extrabold text-ink">{Math.round(feas)}%</span>
-            <Badge tone="emerald" icon={Icons.TrendingUp} className="mb-1.5">
-              strong
-            </Badge>
-          </div>
-          <p className="mt-1 max-w-[200px] text-xs text-ink-mute">
-            Frontend → Product Analyst → Product Lead
+        {/* "higher opportunity" axis */}
+        <div className="pointer-events-none absolute left-3 top-0 hidden h-full flex-col items-center justify-center gap-3 sm:flex">
+          <Icons.TrendingUp size={18} className="text-brand" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-mute [writing-mode:vertical-rl] [transform:rotate(180deg)]">
+            Higher opportunity
+          </span>
+        </div>
+
+        {/* live opportunity readout */}
+        <div className="absolute right-5 top-24 hidden rounded-2xl border border-line/12 bg-surface/90 p-5 shadow-soft backdrop-blur-sm sm:block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
+            Opportunity
           </p>
+          <div className="mt-1 flex items-end gap-1">
+            <span className="font-display text-4xl font-extrabold text-ink">
+              ${Math.round(oppNow)}k
+            </span>
+            <Icons.TrendingUp size={20} className="mb-2 text-emerald-500" />
+          </div>
+          <p className="mt-1 max-w-[200px] text-xs text-ink-mute">{reached.title}</p>
         </div>
 
         {/* captions */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 px-5 pb-16 sm:px-10 lg:bottom-24">
-          <div className="relative mx-auto h-44 max-w-2xl">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 px-5 pb-14 sm:px-10 lg:bottom-20">
+          <div className="relative mx-auto h-40 max-w-2xl">
             {STORY.map((s, i) => {
               const start = i * 0.25;
               const op = bandOpacity(progress, start, start + 0.25, 0.06);
-              const Icon = s.icon;
               return (
                 <div
                   key={i}
-                  className="absolute inset-x-0 bottom-0 rounded-4xl border border-line/10 bg-surface/85 p-6 shadow-glass backdrop-blur-xl"
-                  style={{
-                    opacity: op,
-                    transform: `translateY(${(1 - op) * 20}px)`,
-                  }}
+                  className="absolute inset-x-0 bottom-0 rounded-2xl border border-line/12 bg-surface/95 p-6 shadow-soft"
+                  style={{ opacity: op, transform: `translateY(${(1 - op) * 16}px)` }}
                 >
-                  <div className="flex items-center gap-2 text-brand">
-                    <Icon size={18} strokeWidth={2.2} />
-                    <span className="text-[11px] font-bold uppercase tracking-[0.16em]">
-                      {s.badge}
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-semibold text-brand">{s.step}</span>
+                    <span className="h-px w-5 bg-line/20" />
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
+                      {s.label}
                     </span>
                   </div>
-                  <h3 className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">
+                  <h3 className="mt-2.5 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
                     {s.title}
                   </h3>
                   <p className="mt-1.5 text-sm text-ink-soft sm:text-base">{s.body}</p>
@@ -367,114 +712,435 @@ function StoryStage() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Feature grid                                                        */
-/* ------------------------------------------------------------------ */
-const FEATURES = [
+/* ================================================================== */
+/* Feature sections — alternating editorial rows w/ real visuals       */
+/* ================================================================== */
+function VisualAssessment() {
+  // a focused node with concentric "match" rings + faint neighbours
+  return (
+    <svg viewBox="0 0 460 320" className="w-full">
+      {[90, 64, 40].map((r, i) => (
+        <circle
+          key={r}
+          className="pop"
+          cx={230}
+          cy={160}
+          r={r}
+          fill="none"
+          stroke={ACCENT_HEX.teal}
+          strokeOpacity={0.1 + i * 0.06}
+          strokeWidth={1.4}
+          style={{ transformOrigin: '230px 160px' }}
+        />
+      ))}
+      <line x1={230} y1={160} x2={92} y2={70} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
+      <line x1={230} y1={160} x2={372} y2={86} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
+      <line x1={230} y1={160} x2={356} y2={252} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
+      <NodeChip x={92} y={70} label="Design Eng" accent="wine" state="dim" />
+      <NodeChip x={372} y={86} label="Full-Stack" accent="teal" state="dim" />
+      <NodeChip x={356} y={252} label="Dev Advocate" accent="wine" state="dim" />
+      <NodeChip x={230} y={160} label="Frontend Engineer" accent="teal" state="current" tag="You" />
+      <g className="pop" style={{ transformOrigin: '343px 209px' }}>
+        <rect x={300} y={196} width={86} height={26} rx={13} fill={ACCENT_HEX.teal} />
+        <text x={343} y={213} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">
+          100% match
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+function VisualRouting() {
+  const ids = ['frontend-dev', 'fullstack-dev', 'data-analyst', 'product-lead'];
+  const pos: Record<string, [number, number]> = {
+    'frontend-dev': [70, 90],
+    'fullstack-dev': [240, 60],
+    'data-analyst': [200, 250],
+    'product-lead': [400, 160],
+  };
+  const route = ['frontend-dev', 'data-analyst', 'product-lead'];
+  const routeD = route.map((id, i) => `${i ? 'L' : 'M'}${pos[id][0]},${pos[id][1]}`).join(' ');
+  return (
+    <svg viewBox="0 0 460 320" className="w-full">
+      <line x1={70} y1={90} x2={240} y2={60} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
+      <line x1={240} y1={60} x2={400} y2={160} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
+      <path
+        className="draw-line"
+        d={routeD}
+        fill="none"
+        stroke={ACCENT_HEX.amber}
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        strokeDasharray={1}
+        strokeDashoffset={0}
+        style={{ filter: 'drop-shadow(0 2px 8px rgba(242,185,94,0.4))' }}
+      />
+      {ids.map((id) => {
+        const n = getNode(id)!;
+        const [x, y] = pos[id];
+        const state: ChipState =
+          id === 'frontend-dev'
+            ? 'current'
+            : id === 'product-lead'
+              ? 'target'
+              : route.includes(id)
+                ? 'active'
+                : 'idle';
+        return (
+          <NodeChip
+            key={id}
+            x={x}
+            y={y}
+            label={n.title}
+            accent={n.accent}
+            state={state}
+            tag={id === 'frontend-dev' ? 'You' : id === 'product-lead' ? 'Target' : undefined}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function VisualFeasibility() {
+  const steps = [
+    { label: 'Frontend → Product Analyst', v: 72 },
+    { label: 'Product Analyst → Product Lead', v: 81 },
+    { label: 'Frontend → Full-Stack → Product', v: 63 },
+    { label: 'Frontend → Design Eng → Product', v: 67 },
+  ];
+  return (
+    <svg viewBox="0 0 460 320" className="w-full">
+      {steps.map((s, i) => {
+        const y = 40 + i * 64;
+        const w = (s.v / 100) * 300;
+        return (
+          <g key={s.label}>
+            <text x={20} y={y - 12} fontSize={12.5} fontWeight={600} fill="rgb(var(--c-ink-soft))">
+              {s.label}
+            </text>
+            <rect x={20} y={y} width={300} height={14} rx={7} fill="rgb(var(--c-line))" fillOpacity={0.1} />
+            <rect
+              className="grow-bar"
+              x={20}
+              y={y}
+              width={w}
+              height={14}
+              rx={7}
+              fill={s.v >= 70 ? ACCENT_HEX.teal : ACCENT_HEX.amber}
+              style={{ transformOrigin: `20px ${y + 7}px` }}
+            />
+            <text x={332} y={y + 11} fontSize={13} fontWeight={700} fill="rgb(var(--c-ink))">
+              {s.v}%
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function VisualDemand() {
+  const vals = [0.22, 0.34, 0.3, 0.5, 0.62, 0.84, 1];
+  const W = 400;
+  const H = 150;
+  const X = 30;
+  const Y = 210;
+  const d = vals
+    .map((v, i) => `${i ? 'L' : 'M'}${X + (i / (vals.length - 1)) * W},${Y - v * H}`)
+    .join(' ');
+  return (
+    <svg viewBox="0 0 460 320" className="w-full">
+      <text x={20} y={34} fontSize={15} fontWeight={700} fill="rgb(var(--c-ink))">
+        Product Lead · demand
+      </text>
+      <text x={20} y={56} fontSize={12.5} fill="rgb(var(--c-ink-mute))">
+        Surging · last 6 quarters
+      </text>
+      <line x1={X} y1={Y} x2={X + W} y2={Y} stroke="rgb(var(--c-line))" strokeOpacity={0.15} />
+      <path
+        className="draw-line"
+        d={d}
+        fill="none"
+        stroke={ACCENT_HEX.teal}
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        strokeDasharray={1}
+        strokeDashoffset={0}
+        style={{ filter: 'drop-shadow(0 3px 10px rgba(47,127,143,0.35))' }}
+      />
+      <circle
+        className="pop"
+        cx={X + W}
+        cy={Y - vals[vals.length - 1] * H}
+        r={6}
+        fill={ACCENT_HEX.teal}
+        style={{ transformOrigin: `${X + W}px ${Y - vals[vals.length - 1] * H}px` }}
+      />
+      <g className="pop" style={{ transformOrigin: '385px 262px' }}>
+        <rect x={326} y={244} width={118} height={36} rx={18} fill={ACCENT_HEX.teal} opacity={0.12} />
+        <text x={385} y={267} textAnchor="middle" fontSize={15} fontWeight={800} fill={ACCENT_HEX.teal}>
+          +28% YoY
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+function VisualPatterns() {
+  const rows: [string, number][] = [
+    ['Frontend → Full-Stack → Product', 31],
+    ['Frontend → Analyst → Product', 22],
+    ['Frontend → Design Eng → Product', 14],
+    ['Career gap → cert → re-entry', 9],
+  ];
+  const max = 31;
+  return (
+    <svg viewBox="0 0 460 320" className="w-full">
+      {rows.map(([l, v], i) => {
+        const y = 44 + i * 64;
+        const w = (v / max) * 330;
+        return (
+          <g key={l}>
+            <text x={20} y={y - 12} fontSize={12.5} fontWeight={600} fill="rgb(var(--c-ink-soft))">
+              {l}
+            </text>
+            <rect x={20} y={y} width={330} height={14} rx={7} fill="rgb(var(--c-line))" fillOpacity={0.1} />
+            <rect
+              className="grow-bar"
+              x={20}
+              y={y}
+              width={w}
+              height={14}
+              rx={7}
+              fill={ACCENT_HEX.wine}
+              style={{ transformOrigin: `20px ${y + 7}px` }}
+            />
+            <text x={362} y={y + 11} fontSize={13} fontWeight={700} fill="rgb(var(--c-ink))">
+              {v}%
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+const FEATURES: {
+  header: string;
+  body: string;
+  to: string;
+  link: string;
+  visual: ReactNode;
+}[] = [
   {
-    icon: Icons.Crosshair,
-    title: 'Career State Assessment',
-    body: 'We locate your current node from background, skills, experience and what you actually want.',
-    accent: 'teal',
+    header: 'Find your real starting node',
+    body: 'Answer a two-minute assessment and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
+    to: '/onboarding',
+    link: 'Take the assessment',
+    visual: <VisualAssessment />,
   },
   {
-    icon: Icons.Route,
-    title: 'Dynamic routing',
-    body: 'See every viable path to a target node, with one recommended route based on real tradeoffs.',
-    accent: 'amber',
+    header: 'See every move — then the best route',
+    body: 'Every viable path to a target node is laid out at once, with one recommended route resolved from real tradeoffs: time, qualifications, pay and your own interests.',
+    to: '/routing',
+    link: 'Explore routing',
+    visual: <VisualRouting />,
   },
   {
-    icon: Icons.LineChart,
-    title: 'Node detail & live demand',
-    body: 'Per-node prospects, salary bands and market demand — personalized to your profile.',
-    accent: 'teal',
+    header: 'Score every step on real outcomes',
+    body: 'Each hop carries honest odds and a typical timeline, compared against thousands of historical trajectories. Grounded in evidence, not vibes.',
+    to: '/routing',
+    link: 'See feasibility',
+    visual: <VisualFeasibility />,
   },
   {
-    icon: Icons.GitBranch,
-    title: 'Historical patterns',
-    body: 'Common trajectories, lateral shifts, career gaps and higher-study routes others have taken.',
-    accent: 'wine',
+    header: 'Track live demand & salary',
+    body: 'Per-node prospects, salary bands and market demand — personalized to your profile and refreshed as the market moves underneath you.',
+    to: '/map',
+    link: 'Open the map',
+    visual: <VisualDemand />,
   },
   {
-    icon: Icons.Gauge,
-    title: 'Feasibility recommendation',
-    body: 'Data-driven odds from comparing your state to thousands of historical journeys.',
-    accent: 'navy',
-  },
-  {
-    icon: Icons.BadgeCheck,
-    title: 'Employer positions',
-    body: 'Verified companies pin open roles onto nodes, showing the paths they actually hire from.',
-    accent: 'amber',
+    header: 'Learn from how thousands moved',
+    body: 'Common trajectories, lateral shifts, career gaps and higher-study routes other people have actually taken to reach the node you’re aiming for.',
+    to: '/map',
+    link: 'View patterns',
+    visual: <VisualPatterns />,
   },
 ];
 
-function Features() {
+function FeatureSections() {
+  const [active, setActive] = useState(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el || prefersReducedMotion()) return;
+
+    const runIn = () => {
+      gsap.fromTo(el, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power2.out' });
+      el.querySelectorAll<SVGPathElement>('.draw-line').forEach((p) =>
+        gsap.fromTo(p, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.2, ease: 'power2.out' }),
+      );
+      const bars = el.querySelectorAll('.grow-bar');
+      if (bars.length) gsap.from(bars, { scaleX: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1 });
+      const pops = el.querySelectorAll('.pop');
+      if (pops.length)
+        gsap.from(pops, { scale: 0, opacity: 0, duration: 0.6, ease: 'back.out(1.6)', stagger: 0.08 });
+    };
+
+    let st: ScrollTrigger | undefined;
+    const ctx = gsap.context(() => {
+      if (first.current) {
+        st = ScrollTrigger.create({ trigger: el, start: 'top 80%', once: true, onEnter: runIn });
+      } else {
+        runIn();
+      }
+    }, el);
+    first.current = false;
+    return () => {
+      st?.kill();
+      ctx.revert();
+    };
+  }, [active]);
+
   return (
-    <section id="features" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
-      <Reveal className="mx-auto max-w-2xl text-center">
-        <Badge tone="brand" icon={Icons.Layers}>
-          One platform
-        </Badge>
-        <h2 className="mt-4 font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-          Everything the map knows about{' '}
-          <span className="text-gradient">your next move</span>
+    <section id="features" className="mx-auto max-w-6xl px-5 py-24 sm:px-8 lg:py-32">
+      <Reveal className="max-w-3xl">
+        <Eyebrow>One continuous picture</Eyebrow>
+        <h2 className="mt-5 font-display text-4xl font-black tracking-[-0.02em] text-ink sm:text-6xl">
+          Everything the map knows about your next move.
         </h2>
-        <p className="mt-4 text-lg text-ink-soft">
-          Six capabilities, one continuous picture of where you are and where you could go.
-        </p>
       </Reveal>
 
-      <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f, i) => {
-          const Icon = f.icon;
-          return (
-            <Reveal key={f.title} delay={(i % 3) * 90}>
-              <div className="card group h-full p-6 transition hover:-translate-y-1 hover:shadow-glass">
-                <span
-                  className="grid h-12 w-12 place-items-center rounded-2xl shadow-soft"
-                  style={{
-                    backgroundColor: `${ACCENT_HEX[f.accent]}1A`,
-                    color: ACCENT_HEX[f.accent],
-                  }}
+      <div className="mt-14 grid gap-10 lg:mt-20 lg:grid-cols-2 lg:gap-16">
+        {/* left: pressable accordion */}
+        <div>
+          {FEATURES.map((f, i) => {
+            const open = i === active;
+            return (
+              <div key={f.header} className="border-b border-line/12 first:border-t">
+                <button
+                  onClick={() => setActive(i)}
+                  aria-expanded={open}
+                  className="focus-ring group flex w-full items-center gap-4 py-6 text-left"
                 >
-                  <Icon size={22} strokeWidth={2.1} />
-                </span>
-                <h3 className="mt-5 text-lg font-bold text-ink">{f.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-ink-soft">{f.body}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand opacity-0 transition group-hover:opacity-100">
-                  Explore <Icons.ArrowRight size={15} />
-                </span>
+                  <span
+                    className={cn(
+                      'font-display text-2xl font-bold tracking-tight transition-colors sm:text-[1.7rem]',
+                      open ? 'text-ink' : 'text-ink-mute group-hover:text-ink',
+                    )}
+                  >
+                    {f.header}
+                  </span>
+                  <span
+                    className={cn(
+                      'ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-all duration-300',
+                      open
+                        ? 'rotate-45 border-brand bg-brand text-white'
+                        : 'border-line/20 text-ink-mute group-hover:border-line/40',
+                    )}
+                  >
+                    <Icons.Plus size={16} strokeWidth={2.5} />
+                  </span>
+                </button>
+                <div
+                  className={cn(
+                    'grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                    open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    <p className="max-w-md pb-1 text-lg leading-relaxed text-ink-soft">{f.body}</p>
+                    <Link
+                      to={f.to}
+                      className="mb-6 mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition hover:gap-2.5"
+                    >
+                      {f.link}
+                      <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </Reveal>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* right: swapping visual panel */}
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <div
+            ref={panelRef}
+            className="rounded-3xl border border-line/12 bg-surface p-6 shadow-soft sm:p-10"
+          >
+            <div key={active}>{FEATURES[active].visual}</div>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Stats band with count-up                                            */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Capabilities — clean text rows, no icon tiles                       */
+/* ================================================================== */
+const CAPABILITIES = [
+  ['Node detail & live demand', 'Per-node prospects, salary bands and market demand, personalized to your profile.'],
+  ['Historical patterns', 'Common trajectories, lateral shifts, career gaps and higher-study routes others have taken.'],
+  ['Employer positions', 'Verified companies pin open roles onto nodes, showing the paths they actually hire from.'],
+  ['Industry & adjacency view', 'Zoom out to whole industries and the realistic bridges between them.'],
+];
+
+function Capabilities() {
+  return (
+    <section className="border-t border-line/10">
+      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+        <div className="grid gap-x-16 gap-y-10 sm:grid-cols-2">
+          {CAPABILITIES.map(([title, body], i) => (
+            <Reveal key={title} delay={(i % 2) * 80}>
+              <div className="border-t border-line/12 pt-6">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-sm text-ink-mute">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="text-xl font-bold tracking-tight text-ink">{title}</h3>
+                </div>
+                <p className="mt-2 pl-8 text-ink-soft">{body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Stats                                                               */
+/* ================================================================== */
 function StatItem({ value, suffix, label }: { value: number; suffix: string; label: string }) {
   const { ref, inView } = useInView<HTMLDivElement>({ once: true, threshold: 0.5 });
   const n = useCountUp(value, inView);
   return (
-    <div ref={ref} className="text-center">
-      <div className="font-display text-4xl font-extrabold text-ink sm:text-5xl">
+    <div ref={ref}>
+      <div className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
         {Math.round(n).toLocaleString()}
         {suffix}
       </div>
-      <div className="mt-1 text-sm font-medium text-ink-mute">{label}</div>
+      <div className="mt-2 text-sm font-medium text-ink-mute">{label}</div>
     </div>
   );
 }
 
 function Stats() {
   return (
-    <section className="border-y border-line/10 bg-surface/50">
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 px-5 py-16 sm:px-8 md:grid-cols-4">
+    <section className="border-t border-line/10 bg-surface-2/40">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-8 gap-y-12 px-5 py-20 sm:px-8 md:grid-cols-4">
         <StatItem value={2400000} suffix="+" label="Career journeys analyzed" />
         <StatItem value={18000} suffix="" label="Mapped nodes" />
         <StatItem value={92} suffix="%" label="Route confidence accuracy" />
@@ -484,153 +1150,313 @@ function Stats() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* CTA + footer                                                        */
-/* ------------------------------------------------------------------ */
-function CTA() {
+/* ================================================================== */
+/* CTA                                                                 */
+/* ================================================================== */
+/** Reusable rocket — decorative shape + the launch hero. */
+function RocketSVG({ size = 120 }: { size?: number }) {
   return (
-    <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
-      <Reveal direction="scale">
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-navy via-navy-600 to-teal p-10 text-white shadow-glow sm:p-16 dark:from-navy-700 dark:to-brand">
-          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-amber/30 blur-3xl" />
-          <div className="absolute -bottom-20 left-10 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative max-w-2xl">
-            <Badge tone="amber" icon={Icons.Sparkles} className="bg-white/15 text-white">
-              Start free
-            </Badge>
-            <h2 className="mt-5 font-display text-4xl font-extrabold leading-tight sm:text-5xl">
-              Stop guessing your next move. See the map.
-            </h2>
-            <p className="mt-4 max-w-xl text-lg text-white/80">
-              Run your Career State Assessment in minutes and watch CareerOS route you to where you
-              want to be — with the odds attached.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/assessment">
-                <Button
-                  size="lg"
-                  iconRight={Icons.ArrowRight}
-                  className="bg-white text-navy hover:bg-white/90 dark:bg-white dark:text-navy"
-                >
-                  Take the assessment
-                </Button>
-              </Link>
-              <Link to="/map">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  icon={Icons.Network}
-                  className="border-white/30 text-white hover:bg-white/10"
-                >
-                  Explore the map
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <svg width={size} height={size * 1.55} viewBox="0 0 100 155" fill="none" aria-hidden>
+      <path d="M50 6 C72 22 80 60 76 102 L24 102 C20 60 28 22 50 6Z" fill="#ffffff" stroke="#17324d" strokeWidth="3.5" />
+      <path d="M24 90 L8 120 L24 108 Z" fill="#7e3041" />
+      <path d="M76 90 L92 120 L76 108 Z" fill="#7e3041" />
+      <circle cx="50" cy="48" r="14" fill="#2f7f8f" stroke="#17324d" strokeWidth="3.5" />
+      <circle cx="50" cy="48" r="6" fill="#cdeae9" />
+      <rect x="38" y="100" width="24" height="12" rx="3" fill="#17324d" />
+      <g className="rocket-flame" style={{ transformOrigin: '50px 112px' }}>
+        <path d="M38 112 L50 150 L62 112 Z" fill="#f2b95e" />
+        <path d="M44 112 L50 136 L56 112 Z" fill="#ffd98a" />
+      </g>
+    </svg>
+  );
+}
+
+const LAUNCH_CLOUDS = [
+  { l: '-8%', t: '52%', s: '46vw' },
+  { l: '22%', t: '66%', s: '42vw' },
+  { l: '48%', t: '58%', s: '52vw' },
+  { l: '74%', t: '64%', s: '44vw' },
+  { l: '4%', t: '78%', s: '44vw' },
+  { l: '40%', t: '82%', s: '46vw' },
+  { l: '68%', t: '82%', s: '42vw' },
+  { l: '-6%', t: '28%', s: '38vw' },
+  { l: '64%', t: '26%', s: '40vw' },
+  { l: '30%', t: '40%', s: '36vw' },
+];
+
+/** Full-screen rocket-launch transition that ends covered in cloud. */
+function RocketLaunch({ launching, onDone }: { launching: boolean; onDone: () => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const rocketRef = useRef<HTMLDivElement>(null);
+  const skyRef = useRef<HTMLDivElement>(null);
+  const whiteRef = useRef<HTMLDivElement>(null);
+  const played = useRef(false);
+
+  useEffect(() => {
+    if (!launching || played.current) return;
+    played.current = true;
+    const overlay = overlayRef.current;
+    if (!overlay || prefersReducedMotion()) {
+      onDone();
+      return;
+    }
+    const tl = gsap.timeline({ onComplete: onDone });
+    gsap.set(overlay, { autoAlpha: 1, pointerEvents: 'auto' });
+    tl.fromTo(skyRef.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45 }, 0);
+    // rocket rises slowly so it stays on screen — gentle, near-linear incline
+    tl.fromTo(
+      rocketRef.current,
+      { yPercent: 135, rotate: -3 },
+      { yPercent: -150, rotate: 3, duration: 3, ease: 'power1.in' },
+      0.1,
+    );
+    tl.fromTo(
+      rocketRef.current,
+      { xPercent: -6 },
+      { xPercent: 6, duration: 0.7, ease: 'sine.inOut', repeat: 4, yoyo: true },
+      0.1,
+    );
+    tl.fromTo(
+      '.rocket-flame',
+      { scaleY: 0.7, autoAlpha: 0.75 },
+      { scaleY: 1.3, autoAlpha: 1, duration: 0.08, ease: 'sine.inOut', repeat: 32, yoyo: true },
+      0.1,
+    );
+    tl.fromTo(
+      '.launch-cloud',
+      { scale: 0, autoAlpha: 0 },
+      {
+        scale: 1.9,
+        autoAlpha: 1,
+        duration: 1.2,
+        ease: 'power2.out',
+        stagger: { each: 0.06, from: 'random' },
+      },
+      2.1,
+    );
+    tl.to(whiteRef.current, { autoAlpha: 1, duration: 0.55, ease: 'power1.in' }, 2.9);
+    tl.to({}, { duration: 0.2 });
+    return () => {
+      tl.kill();
+    };
+  }, [launching, onDone]);
+
+  return (
+    <div
+      ref={overlayRef}
+      className="invisible fixed inset-0 z-[100] opacity-0"
+      style={{ pointerEvents: 'none' }}
+      aria-hidden
+    >
+      <div ref={skyRef} className="absolute inset-0 bg-gradient-to-b from-[#bfe0ee] via-[#dcecf2] to-white" />
+      {LAUNCH_CLOUDS.map((c, i) => (
+        <div
+          key={i}
+          className="launch-cloud absolute rounded-full bg-white"
+          style={{ left: c.l, top: c.t, width: c.s, height: c.s }}
+        />
+      ))}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+        <div ref={rocketRef}>
+          <RocketSVG size={150} />
         </div>
-      </Reveal>
+      </div>
+      <div ref={whiteRef} className="absolute inset-0 bg-white opacity-0" />
+    </div>
+  );
+}
+
+/* Career-themed decorative shapes scattered around the launch button. */
+const SHAPE_CLS = 'cta-shape pointer-events-none absolute';
+function CtaShapes() {
+  return (
+    <>
+      <div className={SHAPE_CLS} style={{ left: '7%', top: '15%' }}>
+        <RocketSVG size={66} />
+      </div>
+      <div className={cn(SHAPE_CLS, 'hidden sm:block')} style={{ left: '19%', top: '34%' }}>
+        <svg width="116" height="72" viewBox="0 0 116 72">
+          <rect width="116" height="72" rx="12" fill="#7e3041" />
+          <path
+            d="M14 50 C30 18 38 18 54 50 C70 18 78 18 94 50"
+            stroke="#f2b95e"
+            strokeWidth="9"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <div className={SHAPE_CLS} style={{ left: '13%', top: '62%' }}>
+        <svg width="70" height="70" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="34" fill="#2f7f8f" />
+          <circle cx="36" cy="36" r="22" fill="#e7f1ec" />
+          <circle cx="36" cy="36" r="11" fill="#2f7f8f" />
+        </svg>
+      </div>
+      <div className={cn(SHAPE_CLS, 'hidden sm:block')} style={{ left: '6%', top: '80%' }}>
+        <svg width="76" height="64" viewBox="0 0 76 64">
+          <rect x="4" y="34" width="14" height="30" rx="3" fill="#17324d" />
+          <rect x="24" y="22" width="14" height="42" rx="3" fill="#2f7f8f" />
+          <rect x="44" y="10" width="14" height="54" rx="3" fill="#f2b95e" />
+          <path d="M6 28 L30 16 L52 6" stroke="#7e3041" strokeWidth="3" fill="none" strokeLinecap="round" />
+        </svg>
+      </div>
+      <div className={SHAPE_CLS} style={{ right: '9%', top: '16%', left: 'auto' }}>
+        <svg width="70" height="70" viewBox="0 0 70 70">
+          <path
+            d="M35 2 C40 26 44 30 68 35 C44 40 40 44 35 68 C30 44 26 40 2 35 C26 30 30 26 35 2Z"
+            fill="#f2b95e"
+          />
+        </svg>
+      </div>
+      <div className={cn(SHAPE_CLS, 'hidden sm:block')} style={{ right: '8%', top: '34%', left: 'auto' }}>
+        <svg width="84" height="64" viewBox="0 0 84 64">
+          <path d="M42 8 L80 24 L42 40 L4 24 Z" fill="#17324d" />
+          <path d="M22 32 L22 48 C22 56 62 56 62 48 L62 32" stroke="#17324d" strokeWidth="5" fill="none" />
+          <circle cx="80" cy="24" r="3.5" fill="#f2b95e" />
+          <path d="M80 24 L80 40" stroke="#17324d" strokeWidth="3" />
+        </svg>
+      </div>
+      <div className={SHAPE_CLS} style={{ right: '12%', top: '60%', left: 'auto' }}>
+        <svg width="92" height="80" viewBox="0 0 92 80">
+          <line x1="16" y1="20" x2="74" y2="30" stroke="#17324d" strokeWidth="3" />
+          <line x1="74" y1="30" x2="40" y2="64" stroke="#17324d" strokeWidth="3" />
+          <circle cx="16" cy="20" r="11" fill="#2f7f8f" />
+          <circle cx="74" cy="30" r="11" fill="#f2b95e" />
+          <circle cx="40" cy="64" r="11" fill="#7e3041" />
+        </svg>
+      </div>
+      <div className={cn(SHAPE_CLS, 'hidden sm:block')} style={{ right: '20%', top: '80%', left: 'auto' }}>
+        <svg width="56" height="72" viewBox="0 0 56 72">
+          <path d="M28 6 L52 34 L38 34 L38 66 L18 66 L18 34 L4 34 Z" fill="#7e3041" />
+        </svg>
+      </div>
+    </>
+  );
+}
+
+function CTA({ onLaunch }: { onLaunch: () => void }) {
+  const rootRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.cta-shape', {
+        scale: 0,
+        autoAlpha: 0,
+        duration: 0.7,
+        ease: 'back.out(1.6)',
+        stagger: 0.06,
+        scrollTrigger: { trigger: el, start: 'top 72%' },
+      });
+      gsap.utils.toArray<HTMLElement>('.cta-shape').forEach((s, i) => {
+        gsap.to(s, {
+          y: gsap.utils.random(-16, 16),
+          rotate: gsap.utils.random(-9, 9),
+          duration: gsap.utils.random(2.6, 4.2),
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+          delay: 0.7 + i * 0.08,
+        });
+      });
+    }, el);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section ref={rootRef} className="relative isolate overflow-hidden bg-canvas py-28 sm:py-36">
+      <CtaShapes />
+      <div className="relative mx-auto flex max-w-3xl flex-col items-center px-5 text-center">
+        <Magnetic strength={0.3}>
+          <button
+            onClick={onLaunch}
+            className="focus-ring group inline-flex items-center gap-4 rounded-[1.75rem] bg-navy px-8 py-6 font-display text-2xl font-black leading-tight text-white shadow-[0_34px_80px_-22px_rgba(16,33,50,0.65)] transition-transform duration-200 hover:scale-[1.03] active:scale-[0.99] sm:px-12 sm:py-8 sm:text-4xl dark:bg-brand dark:text-navy"
+          >
+            Ready to boost your career?
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-transform group-hover:-translate-y-1 dark:bg-navy/15 dark:text-navy sm:h-14 sm:w-14">
+              <Icons.Rocket size={26} strokeWidth={2.2} />
+            </span>
+          </button>
+        </Magnetic>
+        <p className="mt-6 text-sm font-medium text-ink-mute">
+          2-minute setup · no résumé needed · free to start
+        </p>
+      </div>
     </section>
   );
 }
 
+/* ================================================================== */
+/* Footer                                                              */
+/* ================================================================== */
+const FOOTER_COLS: [string, string[]][] = [
+  ['Product', ['Traileers map', 'Assessment', 'Routing', 'Pricing']],
+  ['Company', ['About', 'Careers', 'Blog', 'Contact']],
+  ['Resources', ['Help center', 'Methodology', 'Changelog', 'Status']],
+  ['Legal', ['Privacy', 'Terms', 'Security', 'Cookies']],
+];
+
 function Footer() {
   return (
     <footer className="border-t border-line/10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-12 sm:flex-row sm:items-center sm:px-8">
-        <Logo />
-        <p className="text-sm text-ink-mute sm:ml-4">
-          The career-navigation platform. © {new Date().getFullYear()} CareerOS.
-        </p>
-        <div className="flex gap-5 text-sm font-semibold text-ink-soft sm:ml-auto">
-          <a href="#features" className="hover:text-ink">Product</a>
-          <a href="#features" className="hover:text-ink">Employers</a>
-          <a href="#features" className="hover:text-ink">Privacy</a>
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div>
+            <Logo />
+            <p className="mt-4 max-w-xs text-sm text-ink-mute">
+              The career-navigation platform. Map where you are, route where you’re going.
+            </p>
+          </div>
+          {FOOTER_COLS.map(([heading, links]) => (
+            <div key={heading}>
+              <h4 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-mute">
+                {heading}
+              </h4>
+              <ul className="mt-4 space-y-2.5">
+                {links.map((l) => (
+                  <li key={l}>
+                    <a href="#features" className="text-sm text-ink-soft transition hover:text-ink">
+                      {l}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="mt-12 flex flex-col gap-3 border-t border-line/10 pt-6 text-sm text-ink-mute sm:flex-row sm:items-center">
+          <p>© {new Date().getFullYear()} CareerOS. All rights reserved.</p>
+          <p className="sm:ml-auto">Traileers™ is a trademark of CareerOS.</p>
         </div>
       </div>
     </footer>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Hero                                                                */
-/* ------------------------------------------------------------------ */
-function Hero() {
-  const [scrollY, setScrollY] = useState(0);
-  useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  const parallax = clamp01(scrollY / 600);
-
-  return (
-    <section className="relative flex min-h-screen items-center overflow-hidden pt-16">
-      <HeroBackdrop parallax={parallax} />
-      <div
-        className="relative mx-auto w-full max-w-7xl px-5 sm:px-8"
-        style={{ opacity: 1 - parallax * 0.6, transform: `translateY(${parallax * 30}px)` }}
-      >
-        <div className="mx-auto max-w-3xl text-center">
-          <Reveal>
-            <Badge tone="brand" icon={Icons.Sparkles} className="mx-auto">
-              Introducing Traileers™
-            </Badge>
-          </Reveal>
-          <Reveal delay={80}>
-            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[1.02] tracking-tight text-ink sm:text-6xl lg:text-7xl">
-              Navigate your career like a{' '}
-              <span className="text-gradient">map</span>, not a guess.
-            </h1>
-          </Reveal>
-          <Reveal delay={160}>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-ink-soft sm:text-xl">
-              CareerOS turns the entire job landscape into an interactive map — then routes you from
-              where you are to where you want to be, with the feasibility of every step.
-            </p>
-          </Reveal>
-          <Reveal delay={240}>
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/assessment">
-                <Button size="lg" icon={Icons.Compass} iconRight={Icons.ArrowRight}>
-                  Find my node
-                </Button>
-              </Link>
-              <Link to="/map">
-                <Button size="lg" variant="secondary" icon={Icons.Network}>
-                  See a live map
-                </Button>
-              </Link>
-            </div>
-          </Reveal>
-          <Reveal delay={320}>
-            <p className="mt-6 flex items-center justify-center gap-2 text-sm text-ink-mute">
-              <Icons.ShieldCheck size={16} className="text-brand" />
-              No résumé upload required · 2-minute assessment
-            </p>
-          </Reveal>
-        </div>
-      </div>
-
-      {/* scroll cue */}
-      <div className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-2 text-ink-mute">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">Scroll to explore</span>
-        <Icons.ChevronDown size={18} className="animate-bounce" />
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 export function Landing() {
+  const navigate = useNavigate();
+  const [launching, setLaunching] = useState(false);
+  const onDone = useCallback(() => navigate('/onboarding'), [navigate]);
+
   return (
     <div className="bg-canvas">
-      <MarketingNav />
+      <ScrollProgress />
+      <MarketingNav hidden={launching} />
       <Hero />
+      <TrustStrip />
       <StoryStage />
-      <Features />
+      <FeatureSections />
+      <Capabilities />
       <Stats />
-      <CTA />
+      <CTA onLaunch={() => setLaunching(true)} />
       <Footer />
+      {/* Lives at the page root (outside the CTA's `isolate` stacking context)
+          so the fixed full-screen overlay covers the nav + footer. */}
+      <RocketLaunch launching={launching} onDone={onDone} />
     </div>
   );
 }

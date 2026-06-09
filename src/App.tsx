@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
 import { AppShell } from '@/layout/AppShell';
 import { Landing } from '@/screens/Landing';
+import { Onboarding } from '@/screens/Onboarding';
 import { TraileersMap } from '@/screens/TraileersMap';
 import { NodeDetail } from '@/screens/NodeDetail';
 import { Assessment } from '@/screens/Assessment';
@@ -18,6 +19,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route
             path="/map"
             element={

@@ -112,6 +112,17 @@ svg {
   background: var(--scroll-bg);
 }
 
+/* Continuous hero gallery marquee. Track holds two identical copies, so a
+   -50% translate lands exactly on the start of the second copy → seamless. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
