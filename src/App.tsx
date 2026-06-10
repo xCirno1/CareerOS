@@ -26,6 +26,7 @@ import { Terms } from '@/screens/Terms';
 import { Security } from '@/screens/Security';
 import { Cookies } from '@/screens/Cookies';
 import { Login } from '@/screens/Login';
+import { TransitionLab } from '@/screens/TransitionLab';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/_dev/transition-lab" element={<TransitionLab />} />
           <Route
             path="/map"
             element={
@@ -71,7 +73,7 @@ export default function App() {
               </ShellRoute>
             }
           />
-          
+
           {/* Public Footer Routes */}
           <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
           <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
