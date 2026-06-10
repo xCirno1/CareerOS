@@ -1,12 +1,10 @@
-export type { TransitionProps } from './types';
+export type { TransitionComponent, TransitionEntry, TransitionId, TransitionProps } from './types';
 export { RocketLaunch, RocketSVG } from './RocketLaunch';
 export { PortalWarp } from './PortalWarp';
 export { LiquidWipe } from './LiquidWipe';
 export { ConstellationConnect } from './ConstellationConnect';
 export { PaperPlane } from './PaperPlane';
 export { RippleBloom } from './RippleBloom';
-export { ShatterShards } from './ShatterShards';
-export { MosaicFlip } from './MosaicFlip';
-export { VenetianSlats } from './VenetianSlats';
+export { CloudBloom } from './CloudBloom';
 export { ElevatorRise } from './ElevatorRise';
 export { CompassSpin } from './CompassSpin';

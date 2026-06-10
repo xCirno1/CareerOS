@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { ComponentType } from 'react';
 import { Link } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { ThemeToggle } from '@/ui/components';
@@ -10,23 +9,16 @@ import {
   ConstellationConnect,
   PaperPlane,
   RippleBloom,
-  ShatterShards,
-  MosaicFlip,
-  VenetianSlats,
+  CloudBloom,
   ElevatorRise,
   CompassSpin,
+  type TransitionComponent,
+  type TransitionEntry,
+  type TransitionId,
   type TransitionProps,
 } from '@/ui/transitions';
 
-type Entry = {
-  id: string;
-  name: string;
-  blurb: string;
-  emoji: string;
-  Component: ComponentType<TransitionProps>;
-};
-
-const TRANSITIONS: Entry[] = [
+const TRANSITIONS: TransitionEntry[] = [
   {
     id: 'rocket',
     name: 'Rocket Launch',
@@ -56,7 +48,7 @@ const TRANSITIONS: Entry[] = [
     Component: ConstellationConnect,
   },
   {
-    id: 'plane',
+    id: 'paper-plane',
     name: 'Paper Plane',
     blurb: 'A folded plane swoops a dashed arc, then a panel sweeps in.',
     emoji: '✈️',
@@ -70,25 +62,11 @@ const TRANSITIONS: Entry[] = [
     Component: RippleBloom,
   },
   {
-    id: 'shatter',
-    name: 'Shatter Shards',
-    blurb: 'Triangular shards spin in from the edges and snap into a pane.',
-    emoji: '🔷',
-    Component: ShatterShards,
-  },
-  {
-    id: 'mosaic',
-    name: 'Mosaic Flip',
-    blurb: 'A grid of tiles flips in across a diagonal wave.',
-    emoji: '🟦',
-    Component: MosaicFlip,
-  },
-  {
-    id: 'slats',
-    name: 'Venetian Slats',
-    blurb: 'Horizontal blinds rotate shut top to bottom.',
-    emoji: '🪟',
-    Component: VenetianSlats,
+    id: 'cloud-bloom',
+    name: 'Cloud Bloom',
+    blurb: 'Soft cloud puffs expand and dissolve into a calm white cover.',
+    emoji: '☁️',
+    Component: CloudBloom,
   },
   {
     id: 'elevator',
@@ -116,7 +94,7 @@ function Stage({
   Component,
   onDone,
 }: {
-  Component: ComponentType<TransitionProps>;
+  Component: TransitionComponent;
   onDone: () => void;
 }) {
   const [launching, setLaunching] = useState(false);
@@ -130,10 +108,10 @@ function Stage({
 export function TransitionLab() {
   // `active` holds the running transition's id; `runId` forces a fresh mount so
   // it replays even when the same button is pressed twice.
-  const [active, setActive] = useState<string | null>(null);
+  const [active, setActive] = useState<TransitionId | null>(null);
   const [runId, setRunId] = useState(0);
 
-  const play = (id: string) => {
+  const play = (id: TransitionId) => {
     setActive(id);
     setRunId((n) => n + 1);
   };
