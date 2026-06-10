@@ -25,6 +25,7 @@ import { Privacy } from '@/screens/Privacy';
 import { Terms } from '@/screens/Terms';
 import { Security } from '@/screens/Security';
 import { Cookies } from '@/screens/Cookies';
+import { Login } from '@/screens/Login';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -37,6 +38,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/login" element={<Login />} />
           <Route
             path="/map"
             element={

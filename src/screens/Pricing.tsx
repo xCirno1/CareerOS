@@ -39,10 +39,10 @@ export function Pricing() {
 
               <ul className="mt-6 space-y-3 border-t border-line/10 pt-6">
                 {[
-                  'C.01 Career Path Navigator',
-                  'C.02 Living Portfolio compiler',
-                  'C.03 Long-term Career Coach',
-                  'C.04 Fair Pay Engine analytics',
+                  'Career Path Navigator',
+                  'Living Portfolio compiler',
+                  'Long-term Career Coach',
+                  'Fair Pay Engine analytics',
                   'Privacy lock against current employer',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-xs text-ink-soft">
@@ -86,8 +86,8 @@ export function Pricing() {
 
               <ul className="mt-6 space-y-3 border-t border-line/10 pt-6">
                 {[
-                  'E.01 Smart Talent Matching dashboard',
-                  'E.03 Talent Reengagement portals',
+                  'Smart Talent Matching dashboard',
+                  'Talent Reengagement portals',
                   '50 direct routing credits per seat/mo',
                   'Anonymized professional profile layout',
                   'Advanced filters for regional coordinates',
@@ -130,10 +130,10 @@ export function Pricing() {
 
               <ul className="mt-6 space-y-3 border-t border-line/10 pt-6">
                 {[
-                  'U.01 Lifelong Outcome Loop tracking',
-                  'U.02 Future State Curriculum Engine',
-                  'U.03 Adaptive Readiness student profiles',
-                  'U.04 Live Internship Marketplace portals',
+                  'Lifelong Outcome Loop tracking',
+                  'Future State Curriculum Engine',
+                  'Adaptive Readiness student profiles',
+                  'Live Internship Marketplace portals',
                   'Dedicated outcome export API keys',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-xs text-ink-soft">

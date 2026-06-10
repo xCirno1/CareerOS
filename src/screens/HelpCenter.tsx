@@ -10,32 +10,32 @@ interface Guide {
 
 const GUIDES: Guide[] = [
   {
-    title: 'How to build your Living Portfolio (C.02)',
+    title: 'How to build your Living Portfolio',
     category: 'candidates',
     excerpt: 'Step-by-step guidance on setting up projects, verifying roles asynchronously, and managing visibility settings.',
   },
   {
-    title: 'Understanding the privacy rules of the Career Path Navigator (C.01)',
+    title: 'Understanding the privacy rules of the Career Path Navigator',
     category: 'candidates',
     excerpt: 'Detailed explanation of how anonymized shapes hide your coordinates from current employers.',
   },
   {
-    title: 'How to set pay alerts in the Fair Pay Engine (C.04)',
+    title: 'How to set pay alerts in the Fair Pay Engine',
     category: 'candidates',
     excerpt: 'Learn to track regional compensation distributions and receive flags on performance review periods.',
   },
   {
-    title: 'Setting up Talent Matching filters (E.01)',
+    title: 'Setting up Talent Matching filters',
     category: 'employers',
     excerpt: 'A guide on designing searches based on candidate trajectories, regional shapes, and skill overlaps.',
   },
   {
-    title: 'Understanding the parameters of the Talent Retention Signal (E.02)',
+    title: 'Understanding the parameters of the Talent Retention Signal',
     category: 'employers',
     excerpt: 'Learn how the system picks up anonymous activity fluctuations to signal retention risks early.',
   },
   {
-    title: 'Configuring the Lifelong Outcome Loop (U.01)',
+    title: 'Configuring the Lifelong Outcome Loop',
     category: 'universities',
     excerpt: 'Guide for faculty admins to import class cohorts and track outcomes across decades.',
   },
@@ -84,9 +84,9 @@ export function HelpCenter() {
           <div className="flex flex-wrap justify-center gap-2 border-b border-line/10 pb-6">
             {[
               { id: 'all', label: 'All Modules' },
-              { id: 'candidates', label: 'Candidate Suite (C.01-C.05)' },
-              { id: 'employers', label: 'Employer Suite (E.01-E.05)' },
-              { id: 'universities', label: 'University Suite (U.01-U.05)' },
+              { id: 'candidates', label: 'Candidate Suite' },
+              { id: 'employers', label: 'Employer Suite' },
+              { id: 'universities', label: 'University Suite' },
             ].map((tab) => (
               <button
                 key={tab.id}

@@ -58,13 +58,6 @@ export function Methodology() {
           </div>
         </Reveal>
       </section>
-
-      {/* CTA report download */}
-      <section className="mt-16 text-center border-t border-line/10 pt-12">
-        <button className="focus-ring h-11 rounded-full border border-line/25 px-6 font-mono text-xs font-semibold text-ink transition hover:border-line/50">
-          Review technical whitepaper (PDF)
-        </button>
-      </section>
     </div>
   );
 }

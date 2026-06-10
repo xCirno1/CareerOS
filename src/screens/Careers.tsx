@@ -68,7 +68,7 @@ export function Careers() {
                 <Icons.Banknote size={16} className="text-brand" /> Fair Pay Guarantee
               </h3>
               <p className="mt-2 text-sm text-ink-soft leading-relaxed">
-                Every role is benchmarked using our own C.04 Fair Pay Engine at the 80th percentile of your regional market. No negotiation games; we make our best offer first.
+                Every role is benchmarked using our own Fair Pay Engine at the 80th percentile of your regional market. No negotiation games; we make our best offer first.
               </p>
             </Card>
 

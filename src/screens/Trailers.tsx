@@ -76,10 +76,7 @@ export function Trailers() {
       {/* Hero Section */}
       <section className="text-center py-8">
         <Reveal>
-          <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-            C.01 - Career Path Navigator Preview
-          </span>
-          <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-ink sm:text-6xl">
+          <h1 className="font-display text-4xl font-black tracking-tight text-ink sm:text-6xl">
             Preview the paths before you <span className="highlight-green">walk them.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-ink-soft sm:text-xl leading-relaxed">
@@ -230,7 +227,7 @@ export function Trailers() {
             <div className="mt-8 flex justify-center">
               <Link to="/onboarding">
                 <Button icon={Icons.Rocket} size="lg">
-                  Initialize Living Portfolio [C.02]
+                  Initialize Living Portfolio
                 </Button>
               </Link>
             </div>

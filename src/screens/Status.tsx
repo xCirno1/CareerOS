@@ -16,13 +16,13 @@ const SERVICES: Service[] = [
     status: 'OPERATIONAL',
   },
   {
-    name: 'C.01 - Map Navigation Engine',
+    name: 'Map Navigation Engine',
     uptime: '99.95%',
     latency: '120ms',
     status: 'OPERATIONAL',
   },
   {
-    name: 'E.01 - Matching & Routing Gateway',
+    name: 'Matching & Routing Gateway',
     uptime: '100%',
     latency: '80ms',
     status: 'OPERATIONAL',
@@ -129,13 +129,6 @@ export function Status() {
             </div>
           </div>
         </Reveal>
-      </section>
-
-      {/* CTA alerts */}
-      <section className="mt-16 text-center border-t border-line/10 pt-12">
-        <button className="focus-ring h-10 rounded-full border border-line/25 px-5 text-xs font-semibold text-ink transition hover:border-line/50 font-mono">
-          Register for status alerts via SMS
-        </button>
       </section>
     </div>
   );

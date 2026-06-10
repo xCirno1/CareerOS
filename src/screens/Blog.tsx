@@ -24,7 +24,7 @@ const ARTICLES: Article[] = [
   {
     id: 'ART-07',
     title: 'The Cost of the Silent 15%: Analyzing Pay Discrepancies in Southeast Asian Tech',
-    excerpt: 'Using aggregated data from the C.04 Fair Pay Engine, we show how salary opacity costs mid-level developers an average of $8,000 USD in lifetime earnings per pivot.',
+    excerpt: 'Using aggregated data from the Fair Pay Engine, we show how salary opacity costs mid-level developers an average of $8,000 USD in lifetime earnings per pivot.',
     readTime: '12_MIN',
     tag: 'COMPENSATION',
     date: 'May 18, 2026',

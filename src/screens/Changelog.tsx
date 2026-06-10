@@ -18,17 +18,17 @@ const LOGS: LogEntry[] = [
     items: [
       {
         type: 'NEW',
-        module: 'C.04',
+        module: 'Fair Pay Engine',
         description: 'Enhanced the Fair Pay Engine salary aggregation models for Jakarta-based tech roles.',
       },
       {
         type: 'MOD',
-        module: 'E.01',
+        module: 'Talent Matching',
         description: 'Optimized search matching response times for large database queries (reduced by 150ms).',
       },
       {
         type: 'FIX',
-        module: 'SYS',
+        module: 'System',
         description: 'Fixed rendering bug on mobile browsers for vertical trajectory paths.',
       },
     ],
@@ -39,17 +39,17 @@ const LOGS: LogEntry[] = [
     items: [
       {
         type: 'NEW',
-        module: 'C.05',
+        module: 'Chapter Designer',
         description: 'Launched the Life Chapter Designer module, allowing candidates to map career breaks.',
       },
       {
         type: 'NEW',
-        module: 'U.03',
+        module: 'Readiness Profile',
         description: 'Added student export formats (JSON/PDF) for the Adaptive Readiness Profile.',
       },
       {
         type: 'MOD',
-        module: 'SEC',
+        module: 'Security',
         description: 'Completed our quarterly independent SOC2 security compliance review.',
       },
     ],

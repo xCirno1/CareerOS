@@ -222,13 +222,8 @@ export function MarketingNav({ hidden = false }: { hidden?: boolean }) {
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
           <ThemeToggle />
-          <Link to="/map" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
+          <Link to="/login" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
             Log in
-          </Link>
-          <Link to="/map" className="hidden sm:block">
-            <button className="focus-ring h-10 rounded-full border border-line/25 px-5 text-[15px] font-semibold text-ink transition hover:border-line/50">
-              Contact sales
-            </button>
           </Link>
           <Link to="/onboarding">
             <button className="focus-ring h-10 rounded-full bg-navy px-5 text-[15px] font-semibold text-white transition hover:bg-navy-600 dark:bg-brand dark:text-navy dark:hover:bg-teal-soft">
