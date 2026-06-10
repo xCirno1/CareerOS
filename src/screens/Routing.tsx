@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
+import { gsap, prefersReducedMotion } from '@/lib/gsap';
+import { useAppStore } from '@/lib/appStore';
 import {
   ROUTES,
   EDGES,
+  NODES,
   getNode,
   CURRENT_NODE_ID,
   TARGET_NODE_ID,
@@ -13,7 +16,7 @@ import {
 } from '@/lib/mockData';
 import { MapGraph } from '@/components/MapGraph';
 import { PageHeader } from '@/components/PageHeader';
-import { Button, Card, Badge, Skeleton, SkeletonText } from '@/ui/components';
+import { Button, Card, Badge, Skeleton, SkeletonText, useToast } from '@/ui/components';
 
 const TONE: Record<string, string> = {
   good: 'text-emerald-500',
@@ -31,16 +34,68 @@ const EDGE_KIND_ICON: Record<string, typeof Icons.ChevronsRight> = {
 export function Routing() {
   const loading = useSimulatedLoading(950);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const { target, setTarget } = useAppStore();
+  const toast = useToast();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState(
     ROUTES.find((r) => r.recommended)?.id ?? ROUTES[0].id,
   );
-  const selectedRoute = ROUTES.find((r) => r.id === selectedRouteId)!;
 
   const from = getNode(CURRENT_NODE_ID)!;
-  const to = getNode(TARGET_NODE_ID)!;
+  const to = getNode(target) ?? getNode(TARGET_NODE_ID)!;
+  const routesForTarget = ROUTES.filter((r) => r.path[r.path.length - 1] === to.id);
+  const selectedRoute = routesForTarget.find((r) => r.id === selectedRouteId) ?? routesForTarget[0];
+
+  useEffect(() => {
+    if (loading || !rootRef.current || prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.rt-reveal', {
+        autoAlpha: 0,
+        y: 20,
+        duration: 0.5,
+        ease: 'power3.out',
+        stagger: 0.07,
+      });
+    }, rootRef);
+    return () => ctx.revert();
+  }, [loading, target]);
+
+  const exportPlan = () => {
+    if (!selectedRoute) return;
+    const lines = [
+      'CareerOS — Pathway plan',
+      `From:   ${from.title}`,
+      `Target: ${to.title}`,
+      `Route:  ${selectedRoute.label} · ${selectedRoute.feasibility}% feasible · ~${selectedRoute.months} mo · +${selectedRoute.salaryDelta}% salary`,
+      '',
+      'Steps:',
+      ...selectedRoute.path.map((id, i) => {
+        const n = getNode(id)!;
+        const nextId = selectedRoute.path[i + 1];
+        const edge = nextId ? EDGES.find((e) => e.from === id && e.to === nextId) : undefined;
+        const via = edge ? `  → ${edge.kind}, ~${edge.months} mo, ${edge.feasibility}% feasible` : '';
+        return `  ${i + 1}. ${n.title}${via}`;
+      }),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `careeros-plan-${selectedRoute.id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Plan exported', { icon: Icons.Download, tone: 'success' });
+  };
+
+  const pickTarget = (id: string) => {
+    setTarget(id);
+    setTargetPickerOpen(false);
+    toast(`Target set to ${getNode(id)?.title ?? 'role'}`, { icon: Icons.Target, tone: 'info' });
+  };
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6">
+    <div ref={rootRef} className="mx-auto max-w-7xl p-4 sm:p-6">
       <PageHeader
         eyebrow="Dynamic routing"
         icon={Icons.Route}
@@ -49,65 +104,117 @@ export function Routing() {
       />
 
       {/* from → to bar */}
-      <Card inset className="mt-5 flex flex-wrap items-center gap-3 p-3.5">
+      <Card inset className="rt-reveal mt-5 flex flex-wrap items-center gap-3 p-3.5">
         <RouteEndpoint label="From" node={from.title} tone="teal" />
         <Icons.ArrowRight size={18} className="text-ink-mute" />
         <RouteEndpoint label="Target" node={to.title} tone="amber" />
-        <Button size="sm" variant="secondary" icon={Icons.SlidersHorizontal} className="ml-auto">
-          Change target
-        </Button>
+        <div className="relative ml-auto">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={Icons.Target}
+            onClick={() => setTargetPickerOpen((o) => !o)}
+          >
+            Change target
+          </Button>
+          {targetPickerOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setTargetPickerOpen(false)} />
+              <div className="absolute right-0 z-50 mt-2 max-h-80 w-72 animate-fade-up overflow-y-auto rounded-2xl border border-line/12 bg-surface p-1.5 shadow-glass">
+                {NODES.filter((n) => n.id !== CURRENT_NODE_ID).map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => pickTarget(n.id)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-line/5',
+                      n.id === to.id && 'bg-brand/8',
+                    )}
+                  >
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">{n.title}</span>
+                      <span className="block truncate text-xs capitalize text-ink-mute">{n.kind}</span>
+                    </span>
+                    {n.id === to.id && <Icons.Check size={15} className="shrink-0 text-brand" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </Card>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        {/* Route options */}
-        <div className="space-y-3">
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-36" rounded="rounded-3xl" />
-              ))
-            : ROUTES.map((r) => (
-                <RouteCard
-                  key={r.id}
-                  route={r}
-                  active={r.id === selectedRouteId}
-                  onSelect={() => setSelectedRouteId(r.id)}
-                />
-              ))}
-        </div>
+      {!loading && routesForTarget.length === 0 ? (
+        <Card className="rt-reveal mt-4 grid place-items-center p-10 text-center">
+          <div className="max-w-sm">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-amber/15 text-amber">
+              <Icons.Route size={24} />
+            </span>
+            <h3 className="mt-4 font-display text-xl font-extrabold text-ink">
+              Still mapping routes to {to.title}
+            </h3>
+            <p className="mt-1.5 text-sm text-ink-soft">
+              We don’t have precomputed pathways to this target yet. Switch back to a charted
+              destination to see the plan.
+            </p>
+            <Button
+              className="mt-5"
+              size="sm"
+              icon={Icons.ArrowLeft}
+              onClick={() => pickTarget(TARGET_NODE_ID)}
+            >
+              Back to {getNode(TARGET_NODE_ID)?.title}
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+          {/* Route options */}
+          <div className="rt-reveal space-y-3">
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-36" rounded="rounded-3xl" />
+                ))
+              : routesForTarget.map((r) => (
+                  <RouteCard
+                    key={r.id}
+                    route={r}
+                    active={r.id === selectedRoute?.id}
+                    onSelect={() => setSelectedRouteId(r.id)}
+                  />
+                ))}
+          </div>
 
-        {/* Visual + breakdown */}
-        <div className="space-y-4">
-          {isDesktop && (
-            <Card className="h-[320px] overflow-hidden p-0">
-              {loading ? (
-                <Skeleton className="h-full w-full" rounded="rounded-3xl" />
+          {/* Visual + breakdown */}
+          <div className="rt-reveal space-y-4">
+            {isDesktop && (
+              <Card className="h-[320px] overflow-hidden p-0">
+                {loading || !selectedRoute ? (
+                  <Skeleton className="h-full w-full" rounded="rounded-3xl" />
+                ) : (
+                  <MapGraph selectedId={null} onSelect={() => {}} highlightPath={selectedRoute.path} />
+                )}
+              </Card>
+            )}
+
+            <Card className="p-5 sm:p-6">
+              <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+                <Icons.Workflow size={18} className="text-brand" />
+                Step-by-step plan
+              </h2>
+              {loading || !selectedRoute ? (
+                <div className="mt-4 space-y-3">
+                  <SkeletonText lines={2} />
+                  <Skeleton className="h-16" rounded="rounded-2xl" />
+                  <Skeleton className="h-16" rounded="rounded-2xl" />
+                </div>
               ) : (
-                <MapGraph
-                  selectedId={null}
-                  onSelect={() => {}}
-                  highlightPath={selectedRoute.path}
-                />
+                <RouteSteps route={selectedRoute} onExport={exportPlan} />
               )}
             </Card>
-          )}
-
-          <Card className="p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-              <Icons.Workflow size={18} className="text-brand" />
-              Step-by-step plan
-            </h2>
-            {loading ? (
-              <div className="mt-4 space-y-3">
-                <SkeletonText lines={2} />
-                <Skeleton className="h-16" rounded="rounded-2xl" />
-                <Skeleton className="h-16" rounded="rounded-2xl" />
-              </div>
-            ) : (
-              <RouteSteps route={selectedRoute} />
-            )}
-          </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -206,7 +313,7 @@ function RouteCard({
   );
 }
 
-function RouteSteps({ route }: { route: RouteType }) {
+function RouteSteps({ route, onExport }: { route: RouteType; onExport: () => void }) {
   return (
     <div className="mt-4">
       {route.path.map((id, i) => {
@@ -274,7 +381,7 @@ function RouteSteps({ route }: { route: RouteType }) {
             View destination
           </Button>
         </Link>
-        <Button size="sm" variant="secondary" icon={Icons.Download}>
+        <Button size="sm" variant="secondary" icon={Icons.Download} onClick={onExport}>
           Export plan
         </Button>
       </div>

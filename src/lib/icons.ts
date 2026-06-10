@@ -22,6 +22,8 @@ import {
   Moon,
   ArrowRight,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   ArrowUpRight,
   ChevronRight,
   ChevronLeft,
@@ -81,6 +83,10 @@ import {
   Trophy,
   Flag,
   Quote,
+  Laptop,
+  Code2,
+  Megaphone,
+  Package,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -102,6 +108,8 @@ export const Icons = {
   Moon,
   ArrowRight,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   ArrowUpRight,
   ChevronRight,
   ChevronLeft,
@@ -161,12 +169,16 @@ export const Icons = {
   Trophy,
   Flag,
   Quote,
+  Laptop,
+  Code2,
+  Megaphone,
+  Package,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icons;
 
 export function getIcon(name: string): LucideIcon {
-  return (Icons as Record<string, LucideIcon>)[name] ?? Icons.CircleDot;
+  return (Icons as Record<string, LucideIcon>)[name] ?? Icons.Briefcase;
 }
 
 export type { LucideIcon };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
+import { useAppStore } from '@/lib/appStore';
 import {
   NODES,
   CURRENT_NODE_ID,
@@ -25,13 +26,17 @@ const KIND_FILTERS: Segment<NodeKind | 'all'>[] = [
 export function TraileersMap() {
   const loading = useSimulatedLoading(1000);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const { saved } = useAppStore();
   const [selectedId, setSelectedId] = useState<string | null>(CURRENT_NODE_ID);
   const [kind, setKind] = useState<NodeKind | 'all'>('all');
   const [showRoute, setShowRoute] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [focusSaved, setFocusSaved] = useState(false);
 
   const selected = selectedId ? getNode(selectedId) : null;
   const recommended = ROUTES.find((r) => r.recommended)!;
   const filterKinds = kind === 'all' ? undefined : new Set([kind]);
+  const focusIds = focusSaved && saved.length ? new Set(saved) : undefined;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 p-4 sm:p-6">
@@ -50,9 +55,37 @@ export function TraileersMap() {
             >
               {showRoute ? 'Hide route' : 'Show route'}
             </Button>
-            <Button variant="secondary" size="sm" icon={Icons.SlidersHorizontal}>
-              Filters
-            </Button>
+            <div className="relative">
+              <Button
+                variant={focusSaved ? 'primary' : 'secondary'}
+                size="sm"
+                icon={Icons.SlidersHorizontal}
+                onClick={() => setFiltersOpen((o) => !o)}
+              >
+                Filters
+              </Button>
+              {filtersOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setFiltersOpen(false)} />
+                  <div className="absolute right-0 z-50 mt-2 w-64 animate-fade-up rounded-2xl border border-line/12 bg-surface p-3 shadow-glass">
+                    <p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
+                      Map filters
+                    </p>
+                    <FilterSwitch
+                      label="Show recommended route"
+                      on={showRoute}
+                      onClick={() => setShowRoute((s) => !s)}
+                    />
+                    <FilterSwitch
+                      label={`Focus saved roles${saved.length ? ` (${saved.length})` : ''}`}
+                      on={focusSaved}
+                      disabled={saved.length === 0}
+                      onClick={() => setFocusSaved((f) => !f)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </>
         }
       />
@@ -86,6 +119,7 @@ export function TraileersMap() {
               onSelect={setSelectedId}
               highlightPath={showRoute ? recommended.path : undefined}
               filterKinds={filterKinds}
+              focusIds={focusIds}
             />
           )}
         </div>
@@ -137,6 +171,44 @@ export function TraileersMap() {
         </div>
       )}
     </div>
+  );
+}
+
+function FilterSwitch({
+  label,
+  on,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  on: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left text-sm font-semibold transition',
+        disabled ? 'cursor-not-allowed text-ink-mute/50' : 'text-ink hover:bg-line/5',
+      )}
+    >
+      {label}
+      <span
+        className={cn(
+          'relative h-5 w-9 shrink-0 rounded-full transition',
+          on ? 'bg-brand' : 'bg-line/20',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all',
+            on ? 'left-[18px]' : 'left-0.5',
+          )}
+        />
+      </span>
+    </button>
   );
 }
 

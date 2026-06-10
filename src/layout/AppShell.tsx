@@ -1,9 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
+import { getNode } from '@/lib/mockData';
+import { AppStoreProvider, useAppStore } from '@/lib/appStore';
 import { NAV } from './nav';
-import { Logo, ThemeToggle, Avatar, Tooltip } from '@/ui/components';
+import { Logo, ThemeToggle, Avatar, Tooltip, ToastProvider } from '@/ui/components';
+import { CommandPalette } from '@/components/CommandPalette';
 
 function NavRow({
   to,
@@ -49,9 +52,86 @@ function NavRow({
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+/** Bookmark button + dropdown of saved roles. */
+function SavedMenu() {
+  const { saved, toggleSaved } = useAppStore();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink"
+        aria-label="Saved roles"
+      >
+        <Icons.Bookmark size={18} />
+        {saved.length > 0 && (
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white ring-2 ring-canvas">
+            {saved.length}
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-up overflow-hidden rounded-2xl border border-line/12 bg-surface shadow-glass">
+            <div className="flex items-center justify-between border-b border-line/10 px-4 py-3">
+              <span className="text-sm font-bold text-ink">Saved roles</span>
+              <span className="text-xs font-semibold text-ink-mute">{saved.length}</span>
+            </div>
+            {saved.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-ink-mute">
+                Nothing saved yet. Tap “Save role” on any role.
+              </p>
+            ) : (
+              <div className="max-h-72 overflow-y-auto p-1.5">
+                {saved.map((id) => {
+                  const n = getNode(id);
+                  if (!n) return null;
+                  return (
+                    <div key={id} className="group flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-line/5">
+                      <Link
+                        to={`/node/${id}`}
+                        onClick={() => setOpen(false)}
+                        className="min-w-0 flex-1"
+                      >
+                        <p className="truncate text-sm font-semibold text-ink">{n.title}</p>
+                        <p className="truncate text-xs capitalize text-ink-mute">{n.kind}</p>
+                      </Link>
+                      <button
+                        onClick={() => toggleSaved(id)}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ink-mute opacity-0 transition hover:bg-line/10 hover:text-wine group-hover:opacity-100"
+                        aria-label={`Remove ${n.title}`}
+                      >
+                        <Icons.X size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
+
+  // ⌘K / Ctrl-K opens the command palette
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -69,9 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-2">
-          {!collapsed && (
-            <p className="eyebrow px-3 pb-2 pt-3">Navigate</p>
-          )}
+          {!collapsed && <p className="eyebrow px-3 pb-2 pt-3">Navigate</p>}
           {NAV.map((item) => (
             <NavRow key={item.to} {...item} collapsed={collapsed} />
           ))}
@@ -111,18 +189,26 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Logo size="sm" />
           </Link>
           <div className="ml-auto hidden flex-1 items-center md:flex md:max-w-md">
-            <label className="flex h-10 w-full items-center gap-2.5 rounded-2xl border border-line/12 bg-surface px-3.5 text-ink-mute focus-within:border-brand/40">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="focus-ring flex h-10 w-full items-center gap-2.5 rounded-2xl border border-line/12 bg-surface px-3.5 text-ink-mute transition hover:border-brand/40"
+            >
               <Icons.Search size={17} />
-              <input
-                placeholder="Search roles, skills, employers…"
-                className="h-full w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-mute"
-              />
-              <kbd className="hidden rounded-md border border-line/15 px-1.5 text-[10px] font-semibold text-ink-mute sm:block">
+              <span className="text-sm">Search roles, skills, employers…</span>
+              <kbd className="ml-auto hidden rounded-md border border-line/15 px-1.5 text-[10px] font-semibold sm:block">
                 ⌘K
               </kbd>
-            </label>
+            </button>
           </div>
           <div className="ml-auto flex items-center gap-2 md:ml-3">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="focus-ring grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink md:hidden"
+              aria-label="Search"
+            >
+              <Icons.Search size={18} />
+            </button>
+            <SavedMenu />
             <button className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink">
               <Icons.Bell size={18} />
               <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-wine ring-2 ring-canvas" />
@@ -132,7 +218,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-0">{children}</main>
+        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-0">
+          {/* keyed wrapper → re-mounts and replays the entrance on every route change */}
+          <div key={location.pathname} className="animate-fade-up">
+            {children}
+          </div>
+        </main>
       </div>
 
       {/* ---- Mobile bottom tab bar ---- */}
@@ -165,8 +256,27 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold text-ink-mute"
+          >
+            <Icons.Search size={20} />
+            Search
+          </button>
         </div>
       </nav>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <AppStoreProvider>
+      <ToastProvider>
+        <Shell>{children}</Shell>
+      </ToastProvider>
+    </AppStoreProvider>
   );
 }

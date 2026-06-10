@@ -30,6 +30,7 @@ export function MapGraph({
   onSelect,
   highlightPath,
   filterKinds,
+  focusIds,
   className,
 }: {
   selectedId: string | null;
@@ -37,6 +38,8 @@ export function MapGraph({
   /** ordered node ids to draw as the recommended/active route */
   highlightPath?: string[];
   filterKinds?: Set<string>;
+  /** when set, only these node ids stay lit (others dim) */
+  focusIds?: Set<string>;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -109,7 +112,8 @@ export function MapGraph({
   }
 
   const isDimmed = (n: CareerNode) =>
-    filterKinds && filterKinds.size > 0 && !filterKinds.has(n.kind);
+    (filterKinds && filterKinds.size > 0 && !filterKinds.has(n.kind)) ||
+    (focusIds && focusIds.size > 0 && !focusIds.has(n.id));
 
   return (
     <div

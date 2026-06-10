@@ -1,9 +1,13 @@
+import { useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Icons } from '@/lib/icons';
+import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading } from '@/lib/hooks';
+import { gsap, prefersReducedMotion } from '@/lib/gsap';
+import { useAppStore } from '@/lib/appStore';
 import {
   getNode,
+  getNodeIcon,
   DEMAND_META,
   PATTERNS,
   EMPLOYERS,
@@ -20,6 +24,7 @@ import {
   Avatar,
   Skeleton,
   SkeletonText,
+  useToast,
 } from '@/ui/components';
 
 const ACCENT_HEX: Record<string, string> = {
@@ -33,6 +38,27 @@ export function NodeDetail() {
   const { id } = useParams();
   const loading = useSimulatedLoading(950);
   const node = getNode(id ?? '');
+  const { isSaved, toggleSaved, addRecent } = useAppStore();
+  const toast = useToast();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (node) addRecent(node.id);
+  }, [node, addRecent]);
+
+  useEffect(() => {
+    if (loading || !rootRef.current || prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.nd-reveal', {
+        autoAlpha: 0,
+        y: 20,
+        duration: 0.5,
+        ease: 'power3.out',
+        stagger: 0.07,
+      });
+    }, rootRef);
+    return () => ctx.revert();
+  }, [loading]);
 
   if (!node) {
     return (
@@ -51,6 +77,7 @@ export function NodeDetail() {
   }
 
   const accent = ACCENT_HEX[node.accent];
+  const RoleIcon = getIcon(getNodeIcon(node));
   const demand = DEMAND_META[node.demand];
   const inbound = edgesOf(node.id).filter((e) => e.to === node.id);
   const employers = EMPLOYERS.filter((e) => e.nodeId === node.id);
@@ -59,7 +86,7 @@ export function NodeDetail() {
     : node.match;
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+    <div ref={rootRef} className="mx-auto max-w-6xl p-4 sm:p-6">
       <Link
         to="/map"
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-mute transition hover:text-ink"
@@ -71,7 +98,7 @@ export function NodeDetail() {
       {loading ? (
         <HeroSkeleton />
       ) : (
-        <Card className="overflow-hidden">
+        <Card className="nd-reveal overflow-hidden">
           <div
             className="relative p-6 sm:p-8"
             style={{
@@ -83,7 +110,7 @@ export function NodeDetail() {
                 className="grid h-16 w-16 shrink-0 place-items-center rounded-3xl shadow-soft"
                 style={{ backgroundColor: `${accent}1F`, color: accent }}
               >
-                <Icons.CircleDot size={30} strokeWidth={2.1} />
+                <RoleIcon size={30} strokeWidth={2.1} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -104,10 +131,29 @@ export function NodeDetail() {
                       Route from here
                     </Button>
                   </Link>
-                  <Button size="sm" variant="secondary" icon={Icons.Bookmark}>
-                    Save role
+                  <Button
+                    size="sm"
+                    variant={isSaved(node.id) ? 'primary' : 'secondary'}
+                    icon={isSaved(node.id) ? Icons.Check : Icons.Bookmark}
+                    onClick={() => {
+                      const nowSaved = toggleSaved(node.id);
+                      toast(
+                        nowSaved ? `Saved ${node.title}` : `Removed ${node.title}`,
+                        { icon: Icons.Bookmark, tone: nowSaved ? 'success' : 'default' },
+                      );
+                    }}
+                  >
+                    {isSaved(node.id) ? 'Saved' : 'Save role'}
                   </Button>
-                  <Button size="sm" variant="ghost" icon={Icons.Share2}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Icons.Share2}
+                    onClick={() => {
+                      navigator.clipboard?.writeText(window.location.href);
+                      toast('Link copied to clipboard', { icon: Icons.Share2, tone: 'info' });
+                    }}
+                  >
                     Share
                   </Button>
                 </div>
@@ -121,7 +167,7 @@ export function NodeDetail() {
       )}
 
       {/* Stats */}
-      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="nd-reveal mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-28" rounded="rounded-3xl" />
@@ -143,7 +189,7 @@ export function NodeDetail() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         {/* Left column */}
-        <div className="space-y-4">
+        <div className="nd-reveal space-y-4">
           {/* Market demand */}
           <Card className="p-5 sm:p-6">
             <SectionTitle icon={Icons.Activity} title="Live market demand" hint="Last 6 quarters" />
@@ -221,7 +267,7 @@ export function NodeDetail() {
         </div>
 
         {/* Right column */}
-        <div className="space-y-4">
+        <div className="nd-reveal space-y-4">
           {/* Feasibility */}
           <Card className="p-5 sm:p-6">
             <SectionTitle icon={Icons.Gauge} title="Feasibility for you" />

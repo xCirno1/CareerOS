@@ -407,6 +407,31 @@ export function getNode(id: string): CareerNode | undefined {
   return NODES.find((n) => n.id === id);
 }
 
+/**
+ * Occupation icon (lucide name) per role, resolved with `getIcon`. Falls back to
+ * a kind-appropriate icon so every node shows something meaningful — never a
+ * generic dot.
+ */
+const NODE_ICON: Record<string, string> = {
+  'frontend-dev': 'Laptop',
+  'fullstack-dev': 'Code2',
+  'design-eng': 'PenTool',
+  'eng-manager': 'Users',
+  'product-lead': 'Package',
+  'data-analyst': 'LineChart',
+  devrel: 'Megaphone',
+  'ai-eng': 'Brain',
+  mba: 'GraduationCap',
+  'startup-founder': 'Rocket',
+};
+
+export function getNodeIcon(node: CareerNode): string {
+  if (NODE_ICON[node.id]) return NODE_ICON[node.id];
+  if (node.kind === 'industry') return 'Building2';
+  if (node.kind === 'career') return 'TrendingUp';
+  return 'Briefcase';
+}
+
 export function edgesOf(id: string): CareerEdge[] {
   return EDGES.filter((e) => e.from === id || e.to === id);
 }

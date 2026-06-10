@@ -14,6 +14,7 @@ export { TextField } from './TextField';
 export { Toggle } from './Toggle';
 export { ThemeToggle } from './ThemeToggle';
 export { Reveal } from './Reveal';
+export { ToastProvider, useToast } from './Toast';
 export { ProgressRing } from './ProgressRing';
 export { Sparkline } from './Sparkline';
 export { StatCard } from './StatCard';

@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
-import { DEMAND_META, type CareerNode } from '@/lib/mockData';
+import { getIcon } from '@/lib/icons';
+import { useAppStore } from '@/lib/appStore';
+import { DEMAND_META, getNodeIcon, type CareerNode } from '@/lib/mockData';
 import {
   Button,
   ProgressRing,
   Sparkline,
   Skeleton,
   SkeletonText,
+  useToast,
 } from '@/ui/components';
 
 const ACCENT_HEX: Record<string, string> = {
@@ -27,6 +30,10 @@ function matchTone(match: number): 'emerald' | 'brand' | 'amber' | 'wine' {
 export function NodeSummary({ node }: { node: CareerNode }) {
   const demand = DEMAND_META[node.demand];
   const accent = ACCENT_HEX[node.accent];
+  const { isSaved, toggleSaved } = useAppStore();
+  const toast = useToast();
+  const saved = isSaved(node.id);
+  const RoleIcon = getIcon(getNodeIcon(node));
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-4">
@@ -34,7 +41,7 @@ export function NodeSummary({ node }: { node: CareerNode }) {
           className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl"
           style={{ backgroundColor: `${accent}1A`, color: accent }}
         >
-          <Icons.CircleDot size={24} strokeWidth={2.2} />
+          <RoleIcon size={24} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
@@ -120,6 +127,24 @@ export function NodeSummary({ node }: { node: CareerNode }) {
             Route here
           </Button>
         </Link>
+        <button
+          onClick={() => {
+            const nowSaved = toggleSaved(node.id);
+            toast(nowSaved ? `Saved ${node.title}` : `Removed ${node.title}`, {
+              icon: Icons.Bookmark,
+              tone: nowSaved ? 'success' : 'default',
+            });
+          }}
+          aria-label={saved ? 'Remove from saved' : 'Save role'}
+          className={cn(
+            'grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition',
+            saved
+              ? 'border-brand bg-brand/10 text-brand'
+              : 'border-line/15 bg-surface text-ink-soft hover:border-line/30 hover:text-ink',
+          )}
+        >
+          <Icons.Bookmark size={16} className={cn(saved && 'fill-current')} />
+        </button>
       </div>
     </div>
   );
