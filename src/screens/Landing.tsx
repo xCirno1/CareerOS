@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
@@ -167,8 +167,9 @@ function Magnetic({ children, strength = 0.4, className }: { children: ReactNode
 /* ================================================================== */
 /* Marketing top nav                                                   */
 /* ================================================================== */
-function MarketingNav({ hidden = false }: { hidden?: boolean }) {
+export function MarketingNav({ hidden = false }: { hidden?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -194,26 +195,34 @@ function MarketingNav({ hidden = false }: { hidden?: boolean }) {
             ['Community', true],
             ['Resources', true],
             ['Pricing', false],
-          ].map(([l, caret]) => (
-            <a
-              key={l as string}
-              href="#features"
-              className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
-            >
-              {l}
-              {caret && <Icons.ChevronDown size={15} className="text-ink-mute" strokeWidth={2.4} />}
-            </a>
-          ))}
+          ].map(([l, caret]) => {
+            if (l === 'Pricing') {
+              return (
+                <Link
+                  key={l as string}
+                  to="/pricing"
+                  className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
+                >
+                  {l as string}
+                </Link>
+              );
+            }
+            return (
+              <a
+                key={l as string}
+                href={location.pathname === '/' ? '#features' : '/#features'}
+                className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
+              >
+                {l as string}
+                {caret && <Icons.ChevronDown size={15} className="text-ink-mute" strokeWidth={2.4} />}
+              </a>
+            );
+          })}
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
           <ThemeToggle />
-          <Link to="/map" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
+          <Link to="/login" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
             Log in
-          </Link>
-          <Link to="/map" className="hidden sm:block">
-            <button className="focus-ring h-10 rounded-full border border-line/25 px-5 text-[15px] font-semibold text-ink transition hover:border-line/50">
-              Contact sales
-            </button>
           </Link>
           <Link to="/onboarding">
             <button className="focus-ring h-10 rounded-full bg-navy px-5 text-[15px] font-semibold text-white transition hover:bg-navy-600 dark:bg-brand dark:text-navy dark:hover:bg-teal-soft">
@@ -1427,14 +1436,34 @@ function CTA({ onLaunch }: { onLaunch: () => void }) {
 /* ================================================================== */
 /* Footer                                                              */
 /* ================================================================== */
-const FOOTER_COLS: [string, string[]][] = [
-  ['Product', ['Traileers map', 'Assessment', 'Routing', 'Pricing']],
+export const FOOTER_PATH_MAP: Record<string, string> = {
+  'Trailers': '/trailers',
+  'Map': '/map',
+  'Assessment': '/assessment',
+  'Routing': '/routing',
+  'Pricing': '/pricing',
+  'About': '/about',
+  'Careers': '/careers',
+  'Blog': '/blog',
+  'Contact': '/contact',
+  'Help center': '/help-center',
+  'Methodology': '/methodology',
+  'Changelog': '/changelog',
+  'Status': '/status',
+  'Privacy': '/privacy',
+  'Terms': '/terms',
+  'Security': '/security',
+  'Cookies': '/cookies',
+};
+
+export const FOOTER_COLS: [string, string[]][] = [
+  ['Product', ['Trailers', 'Map', 'Assessment', 'Routing', 'Pricing']],
   ['Company', ['About', 'Careers', 'Blog', 'Contact']],
   ['Resources', ['Help center', 'Methodology', 'Changelog', 'Status']],
   ['Legal', ['Privacy', 'Terms', 'Security', 'Cookies']],
 ];
 
-function Footer() {
+export function Footer() {
   return (
     <footer className="border-t border-line/10">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
@@ -1451,13 +1480,16 @@ function Footer() {
                 {heading}
               </h4>
               <ul className="mt-4 space-y-2.5">
-                {links.map((l) => (
-                  <li key={l}>
-                    <a href="#features" className="text-sm text-ink-soft transition hover:text-ink">
-                      {l}
-                    </a>
-                  </li>
-                ))}
+                {links.map((l) => {
+                  const targetPath = FOOTER_PATH_MAP[l] || '/';
+                  return (
+                    <li key={l}>
+                      <Link to={targetPath} className="text-sm text-ink-soft transition hover:text-ink">
+                        {l}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
