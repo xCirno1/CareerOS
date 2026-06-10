@@ -8,6 +8,7 @@ import { TraileersMap } from '@/screens/TraileersMap';
 import { NodeDetail } from '@/screens/NodeDetail';
 import { Assessment } from '@/screens/Assessment';
 import { Routing } from '@/screens/Routing';
+import { Insights } from '@/screens/Insights';
 
 // Public layout and screens
 import { PublicLayout } from '@/layout/PublicLayout';
@@ -70,6 +71,14 @@ export default function App() {
             element={
               <ShellRoute>
                 <Routing />
+              </ShellRoute>
+            }
+          />
+          <Route
+            path="/insights"
+            element={
+              <ShellRoute>
+                <Insights />
               </ShellRoute>
             }
           />

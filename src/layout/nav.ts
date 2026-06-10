@@ -10,8 +10,5 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { to: '/map', label: 'Traileers Map', icon: Icons.Network },
   { to: '/routing', label: 'Pathways', icon: Icons.Route },
-];
-
-export const SECONDARY_NAV: NavItem[] = [
-  { to: '/node/product-lead', label: 'Insights', icon: Icons.LineChart },
+  { to: '/insights', label: 'Insights', icon: Icons.LineChart },
 ];
