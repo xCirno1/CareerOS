@@ -6,7 +6,6 @@ import { cn } from '@/lib/cn';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
 import {
   useScrollLerp,
-  useInView,
   useCountUp,
   useReducedMotion,
   useMediaQuery,
@@ -387,7 +386,7 @@ const GALLERY: ReactNode[] = [
   </CardFrame>,
 ];
 
-function Hero() {
+function Hero({ onLaunch }: { onLaunch: () => void }) {
   const reduced = useReducedMotion();
   const lg = useMediaQuery('(min-width: 1024px)');
   const cardW = lg ? 290 : 210;
@@ -432,11 +431,9 @@ function Hero() {
                   Find your starting point. See the route. Move with the odds.
                 </p>
                 <Magnetic className="ml-auto">
-                  <Link to="/onboarding">
-                    <Button size="lg" iconRight={Icons.ArrowRight}>
-                      Find my starting point
-                    </Button>
-                  </Link>
+                  <Button type="button" size="lg" iconRight={Icons.ArrowRight} onClick={onLaunch}>
+                    Find my starting point
+                  </Button>
                 </Magnetic>
               </div>
             </div>
@@ -1091,31 +1088,76 @@ function FeatureSections() {
 }
 
 /* ================================================================== */
-/* Capabilities — clean text rows, no icon tiles                       */
+/* "Everything else" → How it works (routes onward, not a recap)        */
 /* ================================================================== */
-const CAPABILITIES = [
-  ['Role detail & live demand', 'Per-role prospects, salary bands and market demand, personalized to your profile.'],
-  ['Historical patterns', 'Common trajectories, lateral shifts, career gaps and higher-study routes others have taken.'],
-  ['Employer positions', 'Verified companies pin open roles onto career points, showing the paths they actually hire from.'],
-  ['Industry & adjacency view', 'Zoom out to whole industries and the realistic bridges between them.'],
-];
+const HOW_STEPS: {
+  n: string;
+  title: string;
+  body: string;
+  to: string;
+  cta: string;
+  accent: keyof typeof ACCENT_HEX;
+}[] = [
+    {
+      n: '01',
+      title: 'Find your route',
+      body: 'A two-minute assessment places you on the map from your real background, skills and goals.',
+      to: '/onboarding',
+      cta: 'Start the assessment',
+      accent: 'teal',
+    },
+    {
+      n: '02',
+      title: 'See every route',
+      body: 'Open the live map to explore every realistic move from where you are — and the one we recommend.',
+      to: '/map',
+      cta: 'Open the map',
+      accent: 'amber',
+    },
+    {
+      n: '03',
+      title: 'Move with the odds',
+      body: 'Plan a pathway with feasibility, timelines and tradeoffs scored for each step to your target.',
+      to: '/routing',
+      cta: 'Plan a pathway',
+      accent: 'wine',
+    },
+  ];
 
-function Capabilities() {
+function HowItWorks() {
   return (
     <section className="border-t border-line/10">
-      <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
-        <div className="grid gap-x-16 gap-y-10 sm:grid-cols-2">
-          {CAPABILITIES.map(([title, body], i) => (
-            <Reveal key={title} delay={(i % 2) * 80}>
-              <div className="border-t border-line/12 pt-6">
-                <div className="flex items-baseline gap-3">
-                  <span className="font-mono text-sm text-ink-mute">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <h3 className="text-xl font-bold tracking-tight text-ink">{title}</h3>
-                </div>
-                <p className="mt-2 pl-8 text-ink-soft">{body}</p>
-              </div>
+      <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
+        <Reveal className="max-w-2xl">
+          <Eyebrow>Everything else</Eyebrow>
+          <h2 className="mt-5 font-display text-3xl font-black tracking-[-0.02em] text-ink sm:text-4xl">
+            How it works, end to end.
+          </h2>
+          <p className="mt-4 text-lg text-ink-soft">
+            Three steps from “I’m not sure” to a routed plan you can act on — jump in wherever you like.
+          </p>
+        </Reveal>
+
+        <div className="mt-14 grid gap-5 lg:grid-cols-3">
+          {HOW_STEPS.map((s, i) => (
+            <Reveal key={s.n} delay={i * 100}>
+              <Link
+                to={s.to}
+                className="group flex h-full flex-col rounded-3xl border border-line/12 bg-surface p-7 transition duration-300 hover:-translate-y-1 hover:shadow-glass"
+              >
+                <span
+                  className="font-display text-5xl font-black leading-none"
+                  style={{ color: ACCENT_HEX[s.accent] }}
+                >
+                  {s.n}
+                </span>
+                <h3 className="mt-5 text-xl font-bold tracking-tight text-ink">{s.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-6 text-ink-soft">{s.body}</p>
+                <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-all group-hover:gap-2.5">
+                  {s.cta}
+                  <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                </span>
+              </Link>
             </Reveal>
           ))}
         </div>
@@ -1125,30 +1167,132 @@ function Capabilities() {
 }
 
 /* ================================================================== */
-/* Stats                                                               */
+/* Promise band — honest value pillars with GSAP decorations           */
 /* ================================================================== */
-function StatItem({ value, suffix, label }: { value: number; suffix: string; label: string }) {
-  const { ref, inView } = useInView<HTMLDivElement>({ once: true, threshold: 0.5 });
-  const n = useCountUp(value, inView);
+const PROMISES: { decor: 'ring' | 'dots' | 'bars' | 'spark'; color: string; value: string; label: string }[] = [
+  { decor: 'ring', color: '#2f7f8f', value: '2 min', label: 'to your first mapped route' },
+  { decor: 'dots', color: '#5aa6b3', value: 'No résumé', label: 'needed to get started' },
+  { decor: 'bars', color: '#f2b95e', value: 'Every step', label: 'scored on real feasibility' },
+  { decor: 'spark', color: '#94394e', value: 'Live demand', label: 'and salary on every role' },
+];
+
+function PromiseDecor({ kind, color }: { kind: string; color: string }) {
+  if (kind === 'ring') {
+    return (
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden>
+        <circle cx="22" cy="22" r="16" fill="none" stroke="rgb(var(--c-line))" strokeOpacity="0.14" strokeWidth="4" />
+        <circle
+          className="decor-ring"
+          cx="22"
+          cy="22"
+          r="16"
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="26 80"
+        />
+      </svg>
+    );
+  }
+  if (kind === 'dots') {
+    return (
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden>
+        {[8, 22, 36].map((x) => (
+          <circle key={x} className="decor-dot" cx={x} cy="22" r="5" fill={color} />
+        ))}
+      </svg>
+    );
+  }
+  if (kind === 'bars') {
+    return (
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden>
+        {[8, 20, 32].map((x) => (
+          <rect key={x} className="decor-bar" x={x} y="10" width="8" height="26" rx="3" fill={color} />
+        ))}
+      </svg>
+    );
+  }
   return (
-    <div ref={ref}>
-      <div className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-        {Math.round(n).toLocaleString()}
-        {suffix}
-      </div>
-      <div className="mt-2 text-sm font-medium text-ink-mute">{label}</div>
-    </div>
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden>
+      <polyline
+        points="6,30 16,18 24,24 34,10 40,14"
+        fill="none"
+        stroke="rgb(var(--c-line))"
+        strokeOpacity="0.14"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polyline
+        className="decor-spark"
+        points="6,30 16,18 24,24 34,10 40,14"
+        fill="none"
+        stroke={color}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="7 9"
+      />
+      <circle className="decor-spark-dot" cx="40" cy="14" r="3.5" fill={color} />
+    </svg>
   );
 }
 
 function Stats() {
+  const root = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = root.current;
+    if (!el || prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.to('.decor-ring', { rotation: 360, svgOrigin: '22 22', duration: 5.5, ease: 'none', repeat: -1 });
+      gsap.to('.decor-dot', {
+        scale: 0.45,
+        transformOrigin: '50% 50%',
+        duration: 0.7,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        stagger: { each: 0.16 },
+      });
+      gsap.to('.decor-bar', {
+        scaleY: () => gsap.utils.random(0.4, 1),
+        transformOrigin: '50% 100%',
+        duration: 0.55,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        repeatRefresh: true,
+        stagger: { each: 0.12, from: 'random' },
+      });
+      gsap.to('.decor-spark', { strokeDashoffset: -32, duration: 1.3, ease: 'none', repeat: -1 });
+      gsap.to('.decor-spark-dot', {
+        scale: 1.3,
+        transformOrigin: '50% 50%',
+        duration: 0.8,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
+    }, el);
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="border-t border-line/10 bg-surface-2/40">
+    <section ref={root} className="border-t border-line/10 bg-surface-2/40">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-8 gap-y-12 px-5 py-20 sm:px-8 md:grid-cols-4">
-        <StatItem value={2400000} suffix="+" label="Career journeys analyzed" />
-        <StatItem value={18000} suffix="" label="Mapped career points" />
-        <StatItem value={92} suffix="%" label="Route confidence accuracy" />
-        <StatItem value={3400} suffix="" label="Verified employer roles" />
+        {PROMISES.map((p, i) => (
+          <Reveal key={p.label} delay={(i % 4) * 70}>
+            <div className="flex flex-col items-start">
+              <PromiseDecor kind={p.decor} color={p.color} />
+              <div className="mt-4 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                {p.value}
+              </div>
+              <div className="mt-1.5 text-sm font-medium text-ink-mute">{p.label}</div>
+            </div>
+          </Reveal>
+        ))}
       </div>
     </section>
   );
@@ -1337,11 +1481,11 @@ export function Landing() {
     <div className="bg-canvas">
       <ScrollProgress />
       <MarketingNav hidden={launching} />
-      <Hero />
+      <Hero onLaunch={() => setLaunching(true)} />
       <TrustStrip />
       <StoryStage />
       <FeatureSections />
-      <Capabilities />
+      <HowItWorks />
       <Stats />
       <CTA onLaunch={() => setLaunching(true)} />
       <Footer />
