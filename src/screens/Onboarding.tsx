@@ -31,6 +31,7 @@ export function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [computing, setComputing] = useState(false);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [background, setBackground] = useState<string | null>(null);
@@ -42,6 +43,8 @@ export function Onboarding() {
   const [priorities, setPriorities] = useState<Set<string>>(new Set(['growth', 'impact']));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resumeName, setResumeName] = useState('');
+  const [resumeSkipped, setResumeSkipped] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const lock = useRef(false);
@@ -145,7 +148,44 @@ export function Onboarding() {
   };
   const goBack = () => {
     if (step === 0) return;
-    leave(() => setStep((s) => s - 1), -1);
+    leave(() => setStep((s) => (resumeSkipped && s === 4 ? 0 : s - 1)), -1);
+  };
+  const importResumeAndSkip = async (file: File) => {
+    const text = file.size > 6_000_000 ? '' : await file.text().catch(() => '');
+    const source = `${file.name} ${text}`.toLowerCase();
+    const detectedSkills = ASSESSMENT.skills.filter((skill) =>
+      source.includes(skill.toLowerCase().replace(/\s*\/\s*/g, ' ')) ||
+      source.includes(skill.toLowerCase()),
+    );
+    const yearsFound = [...source.matchAll(/(\d{1,2})\+?\s*(?:years|yrs|year)/g)]
+      .map((m) => Number(m[1]))
+      .filter((n) => Number.isFinite(n));
+    const guessedRole =
+      source.match(/(frontend|front-end|react)/)
+        ? 'Frontend Engineer'
+        : source.match(/product/)
+          ? 'Product Manager'
+          : source.match(/data|analytics/)
+            ? 'Data Analyst'
+            : role;
+    const guessedName = file.name
+      .replace(/\.[^.]+$/, '')
+      .replace(/\b(resume|cv|curriculum|vitae)\b/gi, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
+    if (!name.trim() && guessedName) setName(guessedName);
+    if (detectedSkills.length) setSkills(new Set(detectedSkills.slice(0, MAX_SELECTED_SKILLS)));
+    if (yearsFound.length) setYears(Math.max(...yearsFound));
+    setRole(guessedRole);
+    setBackground('other');
+    setOtherBackground('Imported from resume');
+    setResumeName(file.name);
+    setResumeSkipped(true);
+    leave(() => setStep(4), 1);
+    if (resumeInputRef.current) resumeInputRef.current.value = '';
   };
   const onEnter = (e: { key: string; preventDefault: () => void }) => {
     if (e.key === 'Enter') {
@@ -225,6 +265,27 @@ export function Onboarding() {
                   placeholder="Type your name"
                   className="w-full max-w-md border-b-2 border-line/20 bg-transparent pb-3 text-2xl font-bold text-ink outline-none transition-colors placeholder:text-ink-mute/40 focus:border-brand sm:text-3xl"
                 />
+                <input
+                  ref={resumeInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt,.md,.rtf"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (file) void importResumeAndSkip(file);
+                  }}
+                />
+                <p className="mt-4 max-w-md text-sm leading-6 text-ink-mute">
+                  or use your resume to skip! {' '}
+                  <button
+                    type="button"
+                    onClick={() => resumeInputRef.current?.click()}
+                    className="focus-ring rounded font-bold text-brand underline-offset-4 transition hover:underline"
+                  >
+                    Import your resume now
+                  </button>
+                  {resumeName && <span className="block truncate text-xs font-semibold text-brand">{resumeName}</span>}
+                </p>
               </div>
             </>
           )}

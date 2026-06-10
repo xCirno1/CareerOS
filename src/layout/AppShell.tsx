@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
@@ -122,7 +122,18 @@ function ProfileMenu() {
   const toast = useToast();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const role = profile.headline.split('·')[0].trim();
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (target instanceof Node && !menuRef.current?.contains(target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [open]);
 
   const signOut = () => {
     setOpen(false);
@@ -131,7 +142,7 @@ function ProfileMenu() {
   };
 
   return (
-    <div className="relative hidden sm:block">
+    <div ref={menuRef} className="relative hidden sm:block">
       <button
         onClick={() => setOpen((o) => !o)}
         className="focus-ring rounded-full transition hover:opacity-90"
@@ -142,7 +153,6 @@ function ProfileMenu() {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-80 animate-fade-up overflow-hidden rounded-2xl border border-line/12 bg-surface shadow-glass">
             <Link
               to="/profile"
