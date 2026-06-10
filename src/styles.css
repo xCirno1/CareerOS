@@ -107,6 +107,45 @@ svg {
   }
 }
 
+/* Cursor spotlight sheen used on the node-detail cards. JS sets --mx/--my on
+   pointermove and --spot to the node accent. Soft, layered above content but
+   non-interactive, so it reads as a moving highlight rather than a flat card. */
+.spotlight {
+  position: relative;
+}
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    var(--spot, rgb(var(--c-brand) / 0.14)),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.spotlight:hover::after {
+  opacity: 1;
+}
+
+/* Brief ring pulse when a hero signal scroll-jumps to its section. */
+@keyframes nd-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--c-brand) / 0);
+  }
+  45% {
+    box-shadow: 0 0 0 3px rgb(var(--c-brand) / 0.45);
+  }
+}
+.nd-flash {
+  animation: nd-flash 0.85s ease;
+}
+
 /* The lerp stage uses a CSS var set per-frame from JS */
 .welcome-stage {
   background: var(--scroll-bg);

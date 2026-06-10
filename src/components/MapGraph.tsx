@@ -6,7 +6,9 @@ import {
   EDGES,
   CURRENT_NODE_ID,
   TARGET_NODE_ID,
+  getNodeKindMeta,
   type CareerNode,
+  type NodeKind,
 } from '@/lib/mockData';
 
 const ACCENT_HEX: Record<string, string> = {
@@ -170,7 +172,8 @@ export function MapGraph({
             const sel = n.id === selectedId;
             const isCurrent = n.id === CURRENT_NODE_ID;
             const isTarget = n.id === TARGET_NODE_ID;
-            const r = isCurrent || isTarget ? 30 : 24;
+            const kindMeta = getNodeKindMeta(n.kind);
+            const r = (isCurrent || isTarget ? 30 : 24) + (n.kind === 'career' ? 2 : 0);
             const accent = ACCENT_HEX[n.accent];
             const dim = isDimmed(n);
             return (
@@ -197,26 +200,22 @@ export function MapGraph({
                 {sel && (
                   <circle r={r + 8} fill="none" stroke={accent} strokeOpacity={0.4} strokeWidth={2} />
                 )}
-                <circle
-                  r={r}
-                  fill="rgb(var(--c-surface))"
-                  stroke={accent}
-                  strokeWidth={sel ? 4 : 2.5}
-                />
+                <NodeKindShape kind={n.kind} r={r} accent={accent} selected={sel} />
                 {/* match arc */}
                 <circle
-                  r={r}
+                  r={r + (n.kind === 'industry' ? 3 : 0)}
                   fill="none"
                   stroke={accent}
-                  strokeOpacity={0.25}
+                  strokeOpacity={n.kind === 'career' ? 0.34 : 0.25}
                   strokeWidth={2.5}
                   strokeDasharray={`${(n.match / 100) * 2 * Math.PI * r} ${2 * Math.PI * r}`}
                   transform="rotate(-90)"
                 />
+                <KindGlyph kind={n.kind} accent={accent} />
                 <text
                   textAnchor="middle"
-                  dy="0.35em"
-                  fontSize={15}
+                  y={11}
+                  fontSize={13}
                   fontWeight={800}
                   fill="rgb(var(--c-ink))"
                 >
@@ -230,6 +229,15 @@ export function MapGraph({
                   fill="rgb(var(--c-ink))"
                 >
                   {n.title}
+                </text>
+                <text
+                  textAnchor="middle"
+                  y={r + 31}
+                  fontSize={9}
+                  fontWeight={800}
+                  fill={accent}
+                >
+                  {kindMeta.shortLabel.toUpperCase()}
                 </text>
                 {isCurrent && (
                   <text textAnchor="middle" y={-r - 10} fontSize={10} fontWeight={800} fill={ACCENT_HEX.teal} letterSpacing="1">
@@ -255,19 +263,119 @@ export function MapGraph({
       </div>
 
       {/* legend */}
-      <div className="absolute left-4 top-4 hidden items-center gap-3 rounded-2xl border border-line/10 bg-surface/85 px-3.5 py-2 text-xs font-semibold text-ink-soft backdrop-blur-md sm:flex">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: ACCENT_HEX.teal }} /> You
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: ACCENT_HEX.amber }} /> Target
-        </span>
+      <div className="absolute left-4 top-4 hidden max-w-[min(760px,calc(100%-6rem))] flex-wrap items-center gap-3 rounded-2xl border border-line/10 bg-surface/85 px-3.5 py-2 text-xs font-semibold text-ink-soft backdrop-blur-md sm:flex">
+        <LegendKind kind="job" />
+        <LegendKind kind="career" />
+        <LegendKind kind="industry" />
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-4 rounded-full" style={{ background: ACCENT_HEX.amber }} /> Route
         </span>
       </div>
     </div>
   );
+}
+
+function NodeKindShape({
+  kind,
+  r,
+  accent,
+  selected,
+}: {
+  kind: NodeKind;
+  r: number;
+  accent: string;
+  selected: boolean;
+}) {
+  const strokeWidth = selected ? 4 : 2.5;
+  if (kind === 'career') {
+    return (
+      <polygon
+        points={hexPoints(r)}
+        fill="rgb(var(--c-surface))"
+        stroke={accent}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+      />
+    );
+  }
+  if (kind === 'industry') {
+    return (
+      <rect
+        x={-r}
+        y={-r}
+        width={r * 2}
+        height={r * 2}
+        rx={9}
+        fill="rgb(var(--c-surface))"
+        stroke={accent}
+        strokeWidth={strokeWidth}
+        strokeDasharray="7 4"
+      />
+    );
+  }
+  return (
+    <circle
+      r={r}
+      fill="rgb(var(--c-surface))"
+      stroke={accent}
+      strokeWidth={strokeWidth}
+    />
+  );
+}
+
+function KindGlyph({ kind, accent }: { kind: NodeKind; accent: string }) {
+  const common = {
+    stroke: accent,
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    fill: 'none',
+    opacity: 0.82,
+  };
+
+  if (kind === 'career') {
+    return (
+      <g transform="translate(0,-8)" {...common}>
+        <path d="M-8 4 0 -4 8 4" />
+        <path d="M0 -4V5" />
+      </g>
+    );
+  }
+  if (kind === 'industry') {
+    return (
+      <g transform="translate(0,-8)" {...common}>
+        <path d="M-9 -1 0 -5 9 -1 0 3Z" />
+        <path d="M-5 2v5c2.5 1.5 7.5 1.5 10 0V2" />
+      </g>
+    );
+  }
+  return (
+    <g transform="translate(0,-8)" {...common}>
+      <rect x={-8} y={-3} width={16} height={10} rx={2} />
+      <path d="M-4 -3v-2h8v2" />
+      <path d="M-8 1h16" />
+    </g>
+  );
+}
+
+function LegendKind({ kind }: { kind: NodeKind }) {
+  const meta = getNodeKindMeta(kind);
+  const color = kind === 'job' ? ACCENT_HEX.teal : kind === 'career' ? ACCENT_HEX.amber : ACCENT_HEX.navy;
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg width="16" height="16" viewBox="-10 -10 20 20" aria-hidden="true">
+        <NodeKindShape kind={kind} r={7} accent={color} selected={false} />
+      </svg>
+      {meta.shortLabel}
+    </span>
+  );
+}
+
+function hexPoints(r: number) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const angle = Math.PI / 6 + i * (Math.PI / 3);
+    return `${Math.cos(angle) * r},${Math.sin(angle) * r}`;
+  }).join(' ');
 }
 
 function ZoomBtn({

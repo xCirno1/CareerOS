@@ -7,6 +7,54 @@
 export type NodeKind = 'job' | 'career' | 'industry';
 export type Demand = 'surging' | 'high' | 'steady' | 'cooling';
 
+export const NODE_KIND_META: Record<
+  NodeKind,
+  {
+    label: string;
+    shortLabel: string;
+    icon: string;
+    mapShape: 'circle' | 'hex' | 'square';
+    badgeTone: 'brand' | 'amber' | 'wine' | 'neutral' | 'emerald' | 'navy';
+    detailTitle: string;
+    detailCopy: string;
+    signals: string[];
+  }
+> = {
+  job: {
+    label: 'Job role',
+    shortLabel: 'Job',
+    icon: 'Briefcase',
+    mapShape: 'circle',
+    badgeTone: 'brand',
+    detailTitle: 'Execution role',
+    detailCopy:
+      'A near-term position with hiring volume, salary range and skill-fit signals you can act on directly.',
+    signals: ['Skill proximity', 'Open roles', 'Next-hop moves'],
+  },
+  career: {
+    label: 'Career track',
+    shortLabel: 'Career',
+    icon: 'Flag',
+    mapShape: 'hex',
+    badgeTone: 'amber',
+    detailTitle: 'Long-horizon track',
+    detailCopy:
+      'A broader destination or leadership arc where scope, trajectory and transition timing matter more than a single posting.',
+    signals: ['Scope growth', 'Trajectory fit', 'Leadership surface'],
+  },
+  industry: {
+    label: 'Route / study',
+    shortLabel: 'Route',
+    icon: 'GraduationCap',
+    mapShape: 'square',
+    badgeTone: 'navy',
+    detailTitle: 'Credential route',
+    detailCopy:
+      'A structured pathway that can unlock transitions through formal learning, network access or industry credibility.',
+    signals: ['Time investment', 'Credential value', 'Network access'],
+  },
+};
+
 export interface CareerNode {
   id: string;
   title: string;
@@ -38,6 +86,162 @@ export interface CareerEdge {
   months: number;
   kind: 'lateral' | 'promotion' | 'pivot' | 'study';
 }
+
+export interface NextAction {
+  id: string;
+  timeframe: string;
+  title: string;
+  description: string;
+  effort: string;
+  /** the "how": a short paragraph on why + how to approach the task */
+  detail: string;
+  /** concrete checkable subtasks generated for this task */
+  subtasks: string[];
+}
+
+const NEXT_ACTION_PLAYBOOK: Record<NodeKind, Omit<NextAction, 'id'>[]> = {
+  job: [
+    {
+      timeframe: 'Today',
+      title: 'Pick one missing proof point',
+      description:
+        'Choose the most visible skill gap and define one portfolio-sized artifact that proves it.',
+      effort: '25 min',
+      detail:
+        'Hiring managers skim for evidence, not adjectives. Instead of trying to fix everything, turn your single biggest gap into one artifact they can click on. Small and specific beats broad and vague.',
+      subtasks: [
+        'List the 3 skills this role asks for most',
+        'Mark the one you can least prove today',
+        'Define a portfolio-sized artifact that proves it',
+        'Block 25 minutes on your calendar to start it',
+      ],
+    },
+    {
+      timeframe: 'This week',
+      title: 'Compare three real postings',
+      description:
+        'Extract repeated requirements and rewrite your profile around the skills employers actually name.',
+      effort: '45 min',
+      detail:
+        'Three live job posts are a free requirements document. The words that repeat across all three are the ones screeners actually filter on — mirror that language back in your profile.',
+      subtasks: [
+        'Open 3 live postings for this exact role',
+        'Highlight every requirement that repeats',
+        'Split them into must-have vs nice-to-have',
+        'Rewrite your headline around the must-haves',
+      ],
+    },
+    {
+      timeframe: 'This month',
+      title: 'Ship a targeted work sample',
+      description:
+        'Create one role-specific case study, demo or analysis that can be linked in an application.',
+      effort: '4-6 hr',
+      detail:
+        'One concrete sample outperforms a page of bullet points. Build the smallest thing that still proves the skill, then make it openable in 30 seconds from a single link.',
+      subtasks: [
+        'Scope a small case study, demo or analysis',
+        'Build the smallest version that still proves skill',
+        'Write a 3-line summary of the outcome',
+        'Add a shareable link to your profile',
+      ],
+    },
+  ],
+  career: [
+    {
+      timeframe: 'Today',
+      title: 'Choose a stepping-stone role',
+      description:
+        'Select the closest feeder role so the destination becomes a sequence instead of a vague leap.',
+      effort: '20 min',
+      detail:
+        'Big destinations feel unreachable because they are usually two or three hops away, not one. Pick the closest realistic feeder role and the leap turns into a sequence you can actually plan.',
+      subtasks: [
+        'List feeder roles one hop from your target',
+        'Score each on feasibility and personal fit',
+        'Pick the closest realistic next step',
+        'Note the 2 skills it builds toward the target',
+      ],
+    },
+    {
+      timeframe: 'This week',
+      title: 'Map the influence gap',
+      description:
+        'Identify where you need more ownership: strategy, people, stakeholders, revenue or delivery.',
+      effort: '45 min',
+      detail:
+        'Leadership tracks reward scope, not seniority. Find the single dimension where you have the least ownership today, then go looking for one project that forces you to grow it.',
+      subtasks: [
+        'List where you already hold real ownership',
+        'Mark the gap: strategy, people, stakeholders or revenue',
+        'Find one project that closes that gap',
+        'Name a person who could sponsor it',
+      ],
+    },
+    {
+      timeframe: 'This month',
+      title: 'Lead one visible initiative',
+      description:
+        'Create evidence of scope by owning a decision, metric or cross-functional outcome end to end.',
+      effort: '6-8 hr',
+      detail:
+        'Promotion committees look for proof you already operate at the next level. Owning one outcome end to end — and writing up the result — is that proof in its most portable form.',
+      subtasks: [
+        'Pick a decision, metric or outcome to own',
+        'Define what success looks like in numbers',
+        'Run it end to end for one full cycle',
+        'Write up the result as evidence of scope',
+      ],
+    },
+  ],
+  industry: [
+    {
+      timeframe: 'Today',
+      title: 'Calculate the commitment',
+      description:
+        'Estimate time, cost and opportunity cost before treating this route as the default path.',
+      effort: '30 min',
+      detail:
+        'Credential routes are expensive in time and money, so treat the decision like an investment. Put real numbers on it and set a threshold before you let momentum make the choice for you.',
+      subtasks: [
+        'Estimate the total time in months',
+        'Estimate direct cost + opportunity cost',
+        'Compare it against a no-credential path',
+        'Decide a clear go / no-go threshold',
+      ],
+    },
+    {
+      timeframe: 'This week',
+      title: 'Validate with two people',
+      description:
+        'Talk to someone who completed the route and someone who hired from it to test real signal value.',
+      effort: '2 calls',
+      detail:
+        'The brochure never tells you what a credential actually signals. Two short conversations — one graduate, one hiring manager — reveal whether it changes outcomes or just looks good on paper.',
+      subtasks: [
+        'Find someone who completed this route',
+        'Find someone who hires from it',
+        'Ask both what signal it really sends',
+        'Write down whether it changes hiring',
+      ],
+    },
+    {
+      timeframe: 'This month',
+      title: 'Run a low-cost trial',
+      description:
+        'Take a short module, workshop or project before committing to the full credential path.',
+      effort: '3-5 hr',
+      detail:
+        'You can sample most routes before you commit to them. A short module tests both the subject and your own appetite for it, so the full program becomes a confident yes rather than a sunk cost.',
+      subtasks: [
+        'Find a short module or intro workshop',
+        'Commit 3-5 hours to actually finishing it',
+        'Judge the fit before the full program',
+        'Decide whether to commit fully',
+      ],
+    },
+  ],
+};
 
 export const CURRENT_NODE_ID = 'frontend-dev';
 export const TARGET_NODE_ID = 'product-lead';
@@ -301,6 +505,104 @@ export const ROUTES: Route[] = [
   },
 ];
 
+function midSalary(node: CareerNode): number {
+  if (!node.salary.max) return 0;
+  return (node.salary.min + node.salary.max) / 2;
+}
+
+/** Enumerate every simple forward path from `fromId` to `toId` (bounded depth). */
+function enumeratePaths(fromId: string, toId: string, maxHops = 3): string[][] {
+  const paths: string[][] = [];
+  const walk = (current: string, visited: string[], hops: number) => {
+    if (current === toId) {
+      paths.push(visited);
+      return;
+    }
+    if (hops >= maxHops) return;
+    for (const e of EDGES.filter((x) => x.from === current)) {
+      if (visited.includes(e.to)) continue;
+      walk(e.to, [...visited, e.to], hops + 1);
+    }
+  };
+  walk(fromId, [fromId], 0);
+  return paths;
+}
+
+/**
+ * Routes to a given target. Curated routes win when they exist (e.g. the
+ * default Product Lead target); otherwise we synthesise routes from the graph
+ * so *any* reachable target produces a real, ranked plan.
+ */
+export function getRoutesTo(toId: string): Route[] {
+  const curated = ROUTES.filter((r) => r.path[r.path.length - 1] === toId);
+  if (curated.length) return curated;
+
+  const from = getNode(CURRENT_NODE_ID);
+  const target = getNode(toId);
+  if (!from || !target || toId === CURRENT_NODE_ID) return [];
+
+  const fromMid = midSalary(from);
+  const targetMid = midSalary(target);
+  const salaryDelta =
+    fromMid && targetMid ? Math.round(((targetMid - fromMid) / fromMid) * 100) : 0;
+
+  const built = enumeratePaths(CURRENT_NODE_ID, toId).map((path): Route => {
+    let feasProduct = 1;
+    let months = 0;
+    for (let i = 0; i < path.length - 1; i++) {
+      const e = EDGES.find((x) => x.from === path[i] && x.to === path[i + 1])!;
+      feasProduct *= e.feasibility / 100;
+      months += e.months;
+    }
+    const feasibility = Math.round(feasProduct * 100);
+    const hops = path.length - 1;
+    const curve = hops <= 1 ? 'Low' : hops === 2 ? 'Moderate' : 'High';
+    const middle = path
+      .slice(1, -1)
+      .map((id) => getNode(id)?.title)
+      .filter((t): t is string => Boolean(t));
+
+    return {
+      id: `gen-${path.join('-')}`,
+      label: middle.length ? `Via ${middle.join(' & ')}` : 'Direct move',
+      tagline: middle.length
+        ? `Route through ${middle.join(', then ')} before landing the target.`
+        : 'A single decisive hop straight to the target.',
+      path,
+      feasibility,
+      months,
+      salaryDelta,
+      tradeoffs: [
+        {
+          label: 'Feasibility',
+          value: `${feasibility}%`,
+          tone: feasibility >= 60 ? 'good' : feasibility >= 45 ? 'neutral' : 'warn',
+        },
+        {
+          label: 'Time to target',
+          value: `~${months} mo`,
+          tone: months <= 14 ? 'good' : months <= 24 ? 'neutral' : 'warn',
+        },
+        {
+          label: 'Salary uplift',
+          value: salaryDelta > 0 ? `+${salaryDelta}%` : '—',
+          tone: salaryDelta > 0 ? 'good' : 'neutral',
+        },
+        {
+          label: 'Learning curve',
+          value: curve,
+          tone: curve === 'Low' ? 'good' : curve === 'Moderate' ? 'neutral' : 'warn',
+        },
+      ],
+    };
+  });
+
+  built.sort((a, b) => b.feasibility - a.feasibility);
+  const top = built.slice(0, 3);
+  if (top[0]) top[0] = { ...top[0], recommended: true };
+  return top;
+}
+
 export interface Employer {
   id: string;
   name: string;
@@ -407,6 +709,18 @@ export function getNode(id: string): CareerNode | undefined {
   return NODES.find((n) => n.id === id);
 }
 
+export function getNodeKindMeta(kind: NodeKind) {
+  return NODE_KIND_META[kind];
+}
+
+export function getNextActions(node: CareerNode): NextAction[] {
+  return NEXT_ACTION_PLAYBOOK[node.kind].map((action, index) => ({
+    ...action,
+    id: `${node.id}-action-${index}`,
+    description: action.description.replace('skill gap', `${node.topSkills[0]} gap`),
+  }));
+}
+
 /**
  * Occupation icon (lucide name) per role, resolved with `getIcon`. Falls back to
  * a kind-appropriate icon so every node shows something meaningful — never a
@@ -432,8 +746,100 @@ export function getNodeIcon(node: CareerNode): string {
   return 'Briefcase';
 }
 
+/**
+ * What each skill actually demands — the "how deep" rather than just the name.
+ * Used for the skill tooltips on the node detail page.
+ */
+const SKILL_INFO: Record<string, string> = {
+  React:
+    'Build component-driven UIs with hooks and state. Deep enough to manage data flow, performance and reusable patterns — not just glue tutorials together.',
+  TypeScript:
+    'Type everyday app code with confidence: interfaces, generics and inference where they help. Compiler-theory depth is not expected.',
+  'UI Systems':
+    'Design and maintain reusable component libraries with consistent tokens, spacing, and interaction states.',
+  Accessibility:
+    'Ship WCAG-compliant interfaces: semantic HTML, full keyboard nav, ARIA where needed, and real screen-reader testing.',
+  'Node.js':
+    'Write server-side JavaScript — HTTP/REST, async I/O, the package ecosystem and basic runtime/process concerns.',
+  Databases:
+    'Model data and write efficient queries across SQL (and one NoSQL). Understand indexes, joins and transactions.',
+  APIs: 'Design and consume REST/GraphQL endpoints with auth, versioning and sensible error contracts.',
+  Cloud:
+    'Deploy and run apps on a major cloud: compute, storage, networking basics and a working CI/CD pipeline.',
+  'Design Systems':
+    'Own the bridge between Figma libraries and coded components, keeping both in lockstep as the source of truth.',
+  Figma:
+    'Production-level fluency: components, auto-layout, variants and interactive prototypes — well past view-only.',
+  Motion: 'Craft purposeful UI animation with real control over easing, timing and choreography (CSS/JS or GSAP).',
+  CSS: 'Master modern layout (flexbox/grid), responsive design, custom properties and selectors — deep enough to build a design system without leaning on a framework.',
+  Prototyping: 'Turn ideas into clickable flows fast, to validate direction before engineering invests.',
+  Leadership:
+    'Set direction, give hard feedback and grow people. You own outcomes through a team, not solo output.',
+  Mentoring: 'Coach engineers 1:1 — unblock them, review their work and level them up deliberately.',
+  Roadmapping:
+    'Sequence work against goals and real capacity, and communicate the trade-offs to stakeholders.',
+  Hiring: 'Run structured interviews, calibrate signal across a panel, and close strong candidates.',
+  'Product Strategy':
+    'Decide what to build and why — positioning, the bets you are making, and the outcomes you will measure.',
+  Discovery:
+    'Validate problems before solutions: user interviews, opportunity sizing and cheap assumption tests.',
+  Analytics:
+    'Define the right metrics, read funnels and judge experiments to drive decisions — not vanity charts.',
+  Stakeholders: 'Align execs, engineering and go-to-market around one plan; manage expectations and conflict.',
+  SQL: 'Comfortably join, aggregate and window over real datasets — and tune a slow query when it matters.',
+  Experimentation: 'Design A/B tests with proper power, guardrail metrics and an honest readout.',
+  Dashboards: 'Build self-serve views in a BI tool that answer recurring questions without a follow-up.',
+  Storytelling: 'Turn data into a narrative that moves a decision: structure, framing and clear visuals.',
+  LLMs: 'Apply large language models in products — context windows, tool use, function calling and their limits.',
+  RAG: 'Build retrieval-augmented pipelines: chunking, embeddings, vector search and grounded answers.',
+  Eval: 'Measure model and app quality with offline + online evals and a regression suite you trust.',
+  Prompting: 'Engineer reliable prompts and system messages, and know when to reach for tools or fine-tuning instead.',
+  Writing: 'Explain technical ideas clearly across docs, posts and tutorials.',
+  Speaking: 'Present and demo to live audiences with confidence and clarity.',
+  Community: 'Grow and genuinely support a developer community across multiple channels.',
+  Demos: 'Build compelling live or recorded product demos that land the value fast.',
+  Strategy: 'Frame long-range choices: where to play, how to win, and what to say no to.',
+  Finance: 'Read financial statements, model unit economics and reason about capital.',
+  Operations: 'Design the processes and systems that let a function scale reliably.',
+  Network: 'Build and leverage relationships for access, hiring and deals.',
+  '0→1': 'Take a product from nothing to first traction with extreme scrappiness.',
+  Fundraising: 'Tell the story, build the model and actually run a raise with investors.',
+  Sales: 'Find, qualify and close customers — you own the full pipeline early on.',
+  Resilience: 'Sustain energy and judgment through prolonged uncertainty and setbacks.',
+};
+
+export function getSkillInfo(skill: string): string {
+  return (
+    SKILL_INFO[skill] ??
+    'A core competency for this role — expect hands-on, working proficiency rather than passing familiarity.'
+  );
+}
+
 export function edgesOf(id: string): CareerEdge[] {
   return EDGES.filter((e) => e.from === id || e.to === id);
+}
+
+export const EDGE_KIND_META: Record<
+  CareerEdge['kind'],
+  { label: string; icon: string; tone: string; accent: 'teal' | 'amber' | 'navy' | 'wine' }
+> = {
+  lateral: { label: 'Lateral move', icon: 'ChevronsRight', tone: 'text-brand', accent: 'teal' },
+  promotion: { label: 'Promotion', icon: 'TrendingUp', tone: 'text-emerald-500', accent: 'amber' },
+  pivot: { label: 'Pivot', icon: 'GitFork', tone: 'text-wine', accent: 'wine' },
+  study: { label: 'Study route', icon: 'GraduationCap', tone: 'text-ink-soft', accent: 'navy' },
+};
+
+export interface NextHop {
+  edge: CareerEdge;
+  node: CareerNode;
+}
+
+/** Outbound moves you can make *from* this node, best feasibility first. */
+export function getNextHops(id: string): NextHop[] {
+  return EDGES.filter((e) => e.from === id)
+    .map((e) => ({ edge: e, node: getNode(e.to) }))
+    .filter((h): h is NextHop => Boolean(h.node))
+    .sort((a, b) => b.edge.feasibility - a.edge.feasibility);
 }
 
 export const DEMAND_META: Record<Demand, { label: string; tone: string }> = {

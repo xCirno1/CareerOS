@@ -3,7 +3,7 @@ import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/lib/icons';
 import { useAppStore } from '@/lib/appStore';
-import { DEMAND_META, getNodeIcon, type CareerNode } from '@/lib/mockData';
+import { DEMAND_META, getNextActions, getNodeIcon, getNodeKindMeta, type CareerNode } from '@/lib/mockData';
 import {
   Button,
   ProgressRing,
@@ -30,22 +30,36 @@ function matchTone(match: number): 'emerald' | 'brand' | 'amber' | 'wine' {
 export function NodeSummary({ node }: { node: CareerNode }) {
   const demand = DEMAND_META[node.demand];
   const accent = ACCENT_HEX[node.accent];
-  const { isSaved, toggleSaved } = useAppStore();
+  const { isSaved, toggleSaved, setTarget } = useAppStore();
   const toast = useToast();
   const saved = isSaved(node.id);
   const RoleIcon = getIcon(getNodeIcon(node));
+  const kindMeta = getNodeKindMeta(node.kind);
+  const KindIcon = getIcon(kindMeta.icon);
+  const nextAction = getNextActions(node)[0];
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-4">
         <span
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl"
+          className={cn(
+            'grid h-12 w-12 shrink-0 place-items-center border',
+            node.kind === 'career'
+              ? 'rounded-[1.15rem]'
+              : node.kind === 'industry'
+                ? 'rounded-xl border-dashed'
+                : 'rounded-2xl',
+          )}
           style={{ backgroundColor: `${accent}1A`, color: accent }}
         >
           <RoleIcon size={24} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
-            {node.kind}
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-line/8 px-2 py-1 text-[11px] font-bold uppercase text-ink-mute"
+            style={{ color: accent }}
+          >
+            <KindIcon size={12} strokeWidth={2.4} />
+            {kindMeta.label}
           </span>
           <h2 className="mt-0.5 line-clamp-2 text-xl font-extrabold leading-[1.15] text-ink">
             {node.title}
@@ -60,6 +74,22 @@ export function NodeSummary({ node }: { node: CareerNode }) {
       </div>
 
       <p className="mt-4 text-sm leading-6 text-ink-soft">{node.summary}</p>
+
+      <div
+        className={cn(
+          'mt-4 rounded-2xl border p-3.5',
+          node.kind === 'industry' ? 'border-dashed' : 'border-line/10',
+        )}
+        style={{ backgroundColor: `${accent}10` }}
+      >
+        <div className="flex items-start gap-2.5">
+          <KindIcon size={17} className="mt-0.5 shrink-0" style={{ color: accent }} />
+          <div>
+            <p className="text-sm font-bold text-ink">{kindMeta.detailTitle}</p>
+            <p className="mt-1 text-xs leading-5 text-ink-soft">{kindMeta.detailCopy}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <Metric
@@ -116,6 +146,17 @@ export function NodeSummary({ node }: { node: CareerNode }) {
         </div>
       </div>
 
+      <div className="mt-4 rounded-2xl border border-line/10 bg-surface-2 p-3.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="eyebrow">Next move</span>
+          <span className="rounded-full bg-line/8 px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
+            {nextAction.effort}
+          </span>
+        </div>
+        <p className="mt-2 text-sm font-bold text-ink">{nextAction.title}</p>
+        <p className="mt-1 text-xs leading-5 text-ink-soft">{nextAction.description}</p>
+      </div>
+
       <div className="mt-auto flex gap-2 pt-5">
         <Link to={`/node/${node.id}`} className="flex-1">
           <Button block size="sm" icon={Icons.Eye}>
@@ -123,8 +164,14 @@ export function NodeSummary({ node }: { node: CareerNode }) {
           </Button>
         </Link>
         <Link to="/routing" className="flex-1">
-          <Button block size="sm" variant="secondary" icon={Icons.Route}>
-            Route here
+          <Button
+            block
+            size="sm"
+            variant="secondary"
+            icon={Icons.Target}
+            onClick={() => setTarget(node.id)}
+          >
+            Plan path
           </Button>
         </Link>
         <button

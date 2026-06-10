@@ -7,11 +7,14 @@ export function Tooltip({
   children,
   side = 'top',
   className,
+  multiline = false,
 }: {
   content: ReactNode;
   children: ReactNode;
   side?: 'top' | 'bottom' | 'right' | 'left';
   className?: string;
+  /** allow the bubble to wrap to a fixed width (for sentences, not labels) */
+  multiline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const pos: Record<string, string> = {
@@ -32,9 +35,10 @@ export function Tooltip({
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute z-50 whitespace-nowrap rounded-xl bg-navy px-2.5 py-1.5 text-xs font-medium text-white shadow-glass transition-all duration-150 dark:bg-surface dark:text-ink dark:border dark:border-line/10',
+          'pointer-events-none absolute z-50 rounded-xl bg-navy px-2.5 py-1.5 text-xs font-medium text-white shadow-glass transition-all duration-150 dark:border dark:border-line/10 dark:bg-surface dark:text-ink',
+          multiline ? 'w-64 whitespace-normal text-left leading-snug' : 'whitespace-nowrap',
           pos[side],
-          open ? 'opacity-100 translate-y-0' : 'opacity-0',
+          open ? 'translate-y-0 opacity-100' : 'opacity-0',
         )}
       >
         {content}

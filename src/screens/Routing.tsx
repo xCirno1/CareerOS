@@ -6,10 +6,10 @@ import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
 import { gsap, prefersReducedMotion } from '@/lib/gsap';
 import { useAppStore } from '@/lib/appStore';
 import {
-  ROUTES,
   EDGES,
   NODES,
   getNode,
+  getRoutesTo,
   CURRENT_NODE_ID,
   TARGET_NODE_ID,
   type Route as RouteType,
@@ -38,14 +38,17 @@ export function Routing() {
   const toast = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
-  const [selectedRouteId, setSelectedRouteId] = useState(
-    ROUTES.find((r) => r.recommended)?.id ?? ROUTES[0].id,
-  );
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const from = getNode(CURRENT_NODE_ID)!;
   const to = getNode(target) ?? getNode(TARGET_NODE_ID)!;
-  const routesForTarget = ROUTES.filter((r) => r.path[r.path.length - 1] === to.id);
-  const selectedRoute = routesForTarget.find((r) => r.id === selectedRouteId) ?? routesForTarget[0];
+  const routesForTarget = getRoutesTo(to.id);
+  // selection falls back to the recommended (or first) route — so it always
+  // resolves to a valid route for the *current* target after a target change.
+  const selectedRoute =
+    routesForTarget.find((r) => r.id === selectedRouteId) ??
+    routesForTarget.find((r) => r.recommended) ??
+    routesForTarget[0];
 
   useEffect(() => {
     if (loading || !rootRef.current || prefersReducedMotion()) return;
@@ -56,6 +59,10 @@ export function Routing() {
         duration: 0.5,
         ease: 'power3.out',
         stagger: 0.07,
+        // Drop the inline transform when done — a lingering transform creates a
+        // stacking context that would trap the "Change target" dropdown beneath
+        // the later map column.
+        clearProps: 'transform',
       });
     }, rootRef);
     return () => ctx.revert();
@@ -104,7 +111,13 @@ export function Routing() {
       />
 
       {/* from → to bar */}
-      <Card inset className="rt-reveal mt-5 flex flex-wrap items-center gap-3 p-3.5">
+      <Card
+        inset
+        className={cn(
+          'rt-reveal mt-5 flex flex-wrap items-center gap-3 p-3.5',
+          targetPickerOpen && 'relative z-50',
+        )}
+      >
         <RouteEndpoint label="From" node={from.title} tone="teal" />
         <Icons.ArrowRight size={18} className="text-ink-mute" />
         <RouteEndpoint label="Target" node={to.title} tone="amber" />
@@ -120,24 +133,30 @@ export function Routing() {
           {targetPickerOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setTargetPickerOpen(false)} />
-              <div className="absolute right-0 z-50 mt-2 max-h-80 w-72 animate-fade-up overflow-y-auto rounded-2xl border border-line/12 bg-surface p-1.5 shadow-glass">
-                {NODES.filter((n) => n.id !== CURRENT_NODE_ID).map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => pickTarget(n.id)}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-line/5',
-                      n.id === to.id && 'bg-brand/8',
-                    )}
-                  >
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">{n.title}</span>
-                      <span className="block truncate text-xs capitalize text-ink-mute">{n.kind}</span>
-                    </span>
-                    {n.id === to.id && <Icons.Check size={15} className="shrink-0 text-brand" />}
-                  </button>
-                ))}
+              <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-line/12 bg-surface p-1.5 shadow-glass">
+                <div className="max-h-[min(20rem,60vh)] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
+                  {NODES.filter((n) => n.id !== CURRENT_NODE_ID).map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => pickTarget(n.id)}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-line/5',
+                        n.id === to.id && 'bg-brand/8',
+                      )}
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-amber" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink">
+                          {n.title}
+                        </span>
+                        <span className="block truncate text-xs capitalize text-ink-mute">
+                          {n.kind}
+                        </span>
+                      </span>
+                      {n.id === to.id && <Icons.Check size={15} className="shrink-0 text-brand" />}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
