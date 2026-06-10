@@ -501,33 +501,6 @@ export function NodeDetail() {
                     />
                   ))}
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link to="/routing" className="flex-1">
-                    <Button
-                      block
-                      size="sm"
-                      icon={Icons.Route}
-                      iconRight={Icons.ArrowRight}
-                      onClick={makeTarget}
-                    >
-                      Build my route
-                    </Button>
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant={isSaved(node.id) ? 'primary' : 'secondary'}
-                    icon={isSaved(node.id) ? Icons.Check : Icons.Bookmark}
-                    onClick={() => {
-                      const nowSaved = toggleSaved(node.id);
-                      toast(nowSaved ? `Saved ${node.title}` : `Removed ${node.title}`, {
-                        icon: Icons.Bookmark,
-                        tone: nowSaved ? 'success' : 'default',
-                      });
-                    }}
-                  >
-                    {isSaved(node.id) ? 'Saved' : 'Save'}
-                  </Button>
-                </div>
               </>
             )}
           </SpotlightCard>
@@ -594,11 +567,10 @@ export function NodeDetail() {
                   Based on {inbound.length || 3} inbound transitions and people with a profile like{' '}
                   <span className="font-semibold text-ink">{getNode(CURRENT_NODE_ID)?.title}</span>.
                 </p>
-                <Link to="/routing" className="mt-4 w-full">
-                  <Button block size="sm" icon={Icons.Route} iconRight={Icons.ArrowRight}>
-                    Plan the route
-                  </Button>
-                </Link>
+                <p className="mt-3 rounded-2xl bg-line/8 px-3 py-2 text-xs font-semibold leading-5 text-ink-soft">
+                  Route planning uses this score alongside transition time, salary uplift and role
+                  adjacency.
+                </p>
               </div>
             )}
           </SpotlightCard>
