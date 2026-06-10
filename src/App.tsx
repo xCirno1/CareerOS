@@ -9,6 +9,7 @@ import { NodeDetail } from '@/screens/NodeDetail';
 import { Assessment } from '@/screens/Assessment';
 import { Routing } from '@/screens/Routing';
 import { Insights } from '@/screens/Insights';
+import { Profile } from '@/screens/Profile';
 
 // Public layout and screens
 import { PublicLayout } from '@/layout/PublicLayout';
@@ -79,6 +80,14 @@ export default function App() {
             element={
               <ShellRoute>
                 <Insights />
+              </ShellRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ShellRoute>
+                <Profile />
               </ShellRoute>
             }
           />

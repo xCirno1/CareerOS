@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
 import { getNode } from '@/lib/mockData';
 import { AppStoreProvider, useAppStore } from '@/lib/appStore';
+import { ProfileProvider, useProfile } from '@/lib/profile';
 import { NAV } from './nav';
-import { Logo, ThemeToggle, Avatar, Tooltip, ToastProvider } from '@/ui/components';
+import { Logo, ThemeToggle, Avatar, Tooltip, ToastProvider, Toggle, useToast } from '@/ui/components';
 import { CommandPalette } from '@/components/CommandPalette';
 
 function NavRow({
@@ -116,10 +117,108 @@ function SavedMenu() {
   );
 }
 
+function ProfileMenu() {
+  const { profile, update, reset } = useProfile();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const role = profile.headline.split('·')[0].trim();
+
+  const signOut = () => {
+    setOpen(false);
+    toast('Signed out', { icon: Icons.LogOut, tone: 'default' });
+    navigate('/');
+  };
+
+  return (
+    <div className="relative hidden sm:block">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="focus-ring rounded-full transition hover:opacity-90"
+        aria-label="Profile and account menu"
+        aria-expanded={open}
+      >
+        <Avatar name={profile.name} size={40} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-80 animate-fade-up overflow-hidden rounded-2xl border border-line/12 bg-surface shadow-glass">
+            <Link
+              to="/profile"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 border-b border-line/10 px-4 py-3 transition hover:bg-line/5"
+            >
+              <Avatar name={profile.name} size={42} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold text-ink">{profile.name}</span>
+                <span className="block truncate text-xs text-ink-mute">{role}</span>
+              </span>
+              <Icons.ChevronRight size={15} className="shrink-0 text-ink-mute" />
+            </Link>
+
+            <div className="divide-y divide-line/10 px-2 py-1.5">
+              <div className="flex items-center justify-between gap-3 px-2 py-2.5">
+                <span className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+                  <Icons.Moon size={16} className="text-ink-mute" />
+                  Appearance
+                </span>
+                <ThemeToggle />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 px-2 py-2.5">
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+                    <Icons.Target size={16} className="text-ink-mute" />
+                    Open to work
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-mute">Show the badge on your profile.</span>
+                </span>
+                <Toggle
+                  checked={profile.openToWork}
+                  onChange={(v) => {
+                    update({ openToWork: v });
+                    toast(v ? 'Marked open to work' : 'Open-to-work turned off', {
+                      icon: Icons.Target,
+                      tone: v ? 'success' : 'default',
+                    });
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  reset();
+                  setOpen(false);
+                  toast('Profile reset to defaults', { icon: Icons.User, tone: 'default' });
+                }}
+                className="focus-ring flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left text-sm font-semibold text-ink-soft transition hover:bg-line/5 hover:text-ink"
+              >
+                <Icons.User size={16} className="text-ink-mute" />
+                Reset profile to defaults
+              </button>
+
+              <button
+                onClick={signOut}
+                className="focus-ring flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left text-sm font-semibold text-wine transition hover:bg-wine/5"
+              >
+                <Icons.LogOut size={16} />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Shell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
+  const { profile } = useProfile();
+  const role = profile.headline.split('·')[0].trim();
 
   // ⌘K / Ctrl-K opens the command palette
   useEffect(() => {
@@ -169,14 +268,28 @@ function Shell({ children }: { children: ReactNode }) {
             />
             {!collapsed && 'Collapse'}
           </button>
-          {!collapsed && (
-            <div className="flex items-center gap-3 rounded-2xl bg-surface-2 p-2.5">
-              <Avatar name="Avery Quinn" size={36} />
+          {collapsed ? (
+            <Tooltip content="Your profile" side="right">
+              <Link
+                to="/profile"
+                className="focus-ring flex justify-center rounded-2xl py-1 transition hover:bg-line/5"
+                aria-label="Your profile"
+              >
+                <Avatar name={profile.name} size={36} />
+              </Link>
+            </Tooltip>
+          ) : (
+            <Link
+              to="/profile"
+              className="focus-ring flex items-center gap-3 rounded-2xl bg-surface-2 p-2.5 transition hover:bg-line/8"
+            >
+              <Avatar name={profile.name} size={36} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-ink">Avery Quinn</p>
-                <p className="truncate text-xs text-ink-mute">Frontend Engineer</p>
+                <p className="truncate text-sm font-bold text-ink">{profile.name}</p>
+                <p className="truncate text-xs text-ink-mute">{role}</p>
               </div>
-            </div>
+              <Icons.ChevronRight size={15} className="shrink-0 text-ink-mute" />
+            </Link>
           )}
         </div>
       </aside>
@@ -213,8 +326,7 @@ function Shell({ children }: { children: ReactNode }) {
               <Icons.Bell size={18} />
               <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-wine ring-2 ring-canvas" />
             </button>
-            <ThemeToggle />
-            <Avatar name="Avery Quinn" size={40} className="hidden sm:grid" />
+            <ProfileMenu />
           </div>
         </header>
 
@@ -274,9 +386,11 @@ function Shell({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppStoreProvider>
-      <ToastProvider>
-        <Shell>{children}</Shell>
-      </ToastProvider>
+      <ProfileProvider>
+        <ToastProvider>
+          <Shell>{children}</Shell>
+        </ToastProvider>
+      </ProfileProvider>
     </AppStoreProvider>
   );
 }
