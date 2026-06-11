@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
@@ -53,12 +53,31 @@ function NavRow({
   );
 }
 
+function useOutsidePointerDown(
+  ref: RefObject<HTMLElement | null>,
+  active: boolean,
+  onOutside: () => void,
+) {
+  useEffect(() => {
+    if (!active) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (target instanceof Node && !ref.current?.contains(target)) onOutside();
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [active, onOutside, ref]);
+}
+
 /** Bookmark button + dropdown of saved roles. */
 function SavedMenu() {
   const { saved, toggleSaved } = useAppStore();
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useOutsidePointerDown(menuRef, open, () => setOpen(false));
+
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink"
@@ -73,7 +92,6 @@ function SavedMenu() {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-up overflow-hidden rounded-2xl border border-line/12 bg-surface shadow-glass">
             <div className="flex items-center justify-between border-b border-line/10 px-4 py-3">
               <span className="text-sm font-bold text-ink">Saved roles</span>
@@ -117,6 +135,172 @@ function SavedMenu() {
   );
 }
 
+type NotificationItem = {
+  id: string;
+  date: string;
+  title: string;
+  body: string;
+  meta: string;
+  time: string;
+  icon: typeof Icons.Bell;
+  action?: string;
+  unread: boolean;
+};
+
+const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'market-ai',
+    date: 'FRI, 4 JUN 2026',
+    title: 'Market shift detected',
+    body: 'AI Application Engineer demand rose again. Review the updated route signals before choosing your next target.',
+    meta: 'Signal: AI Application Engineer',
+    time: 'Today 09:40',
+    icon: Icons.TrendingUp,
+    action: 'VIEW',
+    unread: true,
+  },
+  {
+    id: 'route-ready',
+    date: 'WED, 2 JUN 2026',
+    title: 'Route recommendation updated',
+    body: 'Your Product Lead pathway now has a shorter recommended hop through Design Engineer.',
+    meta: 'Route: Product Lead',
+    time: '2 Jun 2026 18:55',
+    icon: Icons.Route,
+    action: 'MORE INFO',
+    unread: true,
+  },
+  {
+    id: 'profile-import',
+    date: 'TUE, 1 JUN 2026',
+    title: 'Profile signals refreshed',
+    body: 'Your resume import added new skill evidence and refreshed your match calculations.',
+    meta: 'Profile: Resume import',
+    time: '1 Jun 2026 14:00',
+    icon: Icons.Upload,
+    action: 'MORE INFO',
+    unread: false,
+  },
+];
+
+function NotificationMenu() {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState(MOCK_NOTIFICATIONS);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const unread = items.filter((item) => item.unread).length;
+  useOutsidePointerDown(menuRef, open, () => setOpen(false));
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink"
+        aria-label="Notifications"
+        aria-expanded={open}
+      >
+        <Icons.Bell size={18} />
+        {unread > 0 && (
+          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-wine ring-2 ring-canvas" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-50 mt-2 w-[23rem] animate-fade-up overflow-hidden rounded-xl border border-line/12 bg-surface shadow-glass">
+          <div className="flex items-center justify-between border-b border-line/10 px-4 py-3">
+            <div>
+              <span className="text-sm font-bold text-ink">Notifications</span>
+              <span className="ml-2 text-xs font-semibold text-ink-mute">{unread}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setItems((prev) => prev.map((item) => ({ ...item, unread: false })))}
+              className="text-xs font-bold text-brand hover:underline"
+            >
+              Mark all read
+            </button>
+          </div>
+
+          <div className="max-h-[28rem] overflow-y-auto">
+            {Array.from(new Set(items.map((item) => item.date))).map((date) => (
+              <div key={date}>
+                <div className="border-y border-line/10 bg-line/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
+                  {date}
+                </div>
+                <div className="divide-y divide-line/10">
+                  {items
+                    .filter((item) => item.date === date)
+                    .map((item) => (
+                      <NotificationRow
+                        key={item.id}
+                        item={item}
+                        onRead={() =>
+                          setItems((prev) =>
+                            prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n)),
+                          )
+                        }
+                      />
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotificationRow({
+  item,
+  onRead,
+}: {
+  item: NotificationItem;
+  onRead: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <button
+      type="button"
+      onClick={onRead}
+      className={cn(
+        'relative flex w-full gap-3 px-4 py-4 text-left transition hover:bg-line/5',
+        item.unread && 'bg-wine/[0.045]',
+      )}
+    >
+      {item.unread && <span className="absolute inset-y-0 left-0 w-1 bg-wine" />}
+      <span className="relative mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-line/10 text-ink-soft">
+        <Icon size={17} strokeWidth={2.2} />
+        {item.unread && (
+          <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-amber text-[10px] font-extrabold text-navy ring-2 ring-surface">
+            !
+          </span>
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-start justify-between gap-3">
+          <span className="text-sm font-extrabold leading-5 text-ink">{item.title}</span>
+          <span
+            className={cn(
+              'mt-0.5 h-3 w-3 shrink-0 rounded-full border',
+              item.unread ? 'border-line/30 bg-line/20' : 'border-line/30',
+            )}
+          />
+        </span>
+        <span className="mt-1 block text-xs leading-5 text-ink-soft">{item.body}</span>
+        {item.action && (
+          <span className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-wine">
+            {item.action}
+          </span>
+        )}
+        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-mute">
+          <span>{item.meta}</span>
+          <span>{item.time}</span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function ProfileMenu() {
   const { profile, update, reset } = useProfile();
   const toast = useToast();
@@ -124,16 +308,7 @@ function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const role = profile.headline.split('·')[0].trim();
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target;
-      if (target instanceof Node && !menuRef.current?.contains(target)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown, true);
-    return () => document.removeEventListener('pointerdown', onPointerDown, true);
-  }, [open]);
+  useOutsidePointerDown(menuRef, open, () => setOpen(false));
 
   const signOut = () => {
     setOpen(false);
@@ -332,10 +507,7 @@ function Shell({ children }: { children: ReactNode }) {
               <Icons.Search size={18} />
             </button>
             <SavedMenu />
-            <button className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink">
-              <Icons.Bell size={18} />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-wine ring-2 ring-canvas" />
-            </button>
+            <NotificationMenu />
             <ProfileMenu />
           </div>
         </header>
