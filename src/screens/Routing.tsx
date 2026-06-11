@@ -9,8 +9,7 @@ import {
   EDGES,
   NODES,
   getNode,
-  getRoutesTo,
-  CURRENT_NODE_ID,
+  getRoutesBetween,
   TARGET_NODE_ID,
   type Route as RouteType,
 } from '@/lib/mockData';
@@ -31,18 +30,39 @@ const EDGE_KIND_ICON: Record<string, typeof Icons.ChevronsRight> = {
   study: Icons.GraduationCap,
 };
 
+function priorityScore(route: RouteType, priorities: string[]) {
+  const p = new Set(priorities);
+  let score = route.feasibility * 1.5;
+  if (p.has('comp')) score += route.salaryDelta * 1.25;
+  if (p.has('growth') || p.has('impact')) score += route.feasibility * 0.35;
+  if (p.has('stability')) score += route.path.length <= 3 ? 12 : -8;
+  if (p.has('balance') || p.has('remote')) score += route.months <= 18 ? 10 : -8;
+  score -= route.months * 0.35;
+  return score;
+}
+
+function rankRoutes(routes: RouteType[], priorities: string[]) {
+  const ranked = [...routes].sort(
+    (a, b) => priorityScore(b, priorities) - priorityScore(a, priorities),
+  );
+  return ranked.map((route, index) => ({ ...route, recommended: index === 0 }));
+}
+
 export function Routing() {
   const loading = useSimulatedLoading(950);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const { target, setTarget } = useAppStore();
+  const { target, setTarget, careerProfile } = useAppStore();
   const toast = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
-  const from = getNode(CURRENT_NODE_ID)!;
+  const from = getNode(careerProfile.currentNodeId)!;
   const to = getNode(target) ?? getNode(TARGET_NODE_ID)!;
-  const routesForTarget = getRoutesTo(to.id);
+  const routesForTarget = rankRoutes(
+    getRoutesBetween(from.id, to.id),
+    careerProfile.priorities,
+  );
   // selection falls back to the recommended (or first) route — so it always
   // resolves to a valid route for the *current* target after a target change.
   const selectedRoute =
@@ -135,7 +155,7 @@ export function Routing() {
               <div className="fixed inset-0 z-40" onClick={() => setTargetPickerOpen(false)} />
               <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-line/12 bg-surface p-1.5 shadow-glass">
                 <div className="max-h-[min(20rem,60vh)] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
-                  {NODES.filter((n) => n.id !== CURRENT_NODE_ID).map((n) => (
+                  {NODES.filter((n) => n.id !== from.id).map((n) => (
                     <button
                       key={n.id}
                       onClick={() => pickTarget(n.id)}
@@ -211,7 +231,13 @@ export function Routing() {
                 {loading || !selectedRoute ? (
                   <Skeleton className="h-full w-full" rounded="rounded-3xl" />
                 ) : (
-                  <MapGraph selectedId={null} onSelect={() => {}} highlightPath={selectedRoute.path} />
+                  <MapGraph
+                    selectedId={null}
+                    onSelect={() => {}}
+                    highlightPath={selectedRoute.path}
+                    currentId={from.id}
+                    targetId={to.id}
+                  />
                 )}
               </Card>
             )}

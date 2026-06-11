@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
+import { AppStoreProvider } from '@/lib/appStore';
+import { ProfileProvider } from '@/lib/profile';
+import { ToastProvider } from '@/ui/components';
 import { AppShell } from '@/layout/AppShell';
 import { Landing } from '@/screens/Landing';
 import { Onboarding } from '@/screens/Onboarding';
@@ -119,25 +122,28 @@ export default function App() {
             }
           />
 
-          {/* Public Footer Routes */}
-          <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
-          <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
-          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-          <Route path="/careers" element={<PublicLayout><Careers /></PublicLayout>} />
-          <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
-          <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
-          <Route path="/help-center" element={<PublicLayout><HelpCenter /></PublicLayout>} />
-          <Route path="/methodology" element={<PublicLayout><Methodology /></PublicLayout>} />
-          <Route path="/changelog" element={<PublicLayout><Changelog /></PublicLayout>} />
-          <Route path="/status" element={<PublicLayout><Status /></PublicLayout>} />
-          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
-          <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
-          <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
-          <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
+                {/* Public Footer Routes */}
+                <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
+                <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
+                <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+                <Route path="/careers" element={<PublicLayout><Careers /></PublicLayout>} />
+                <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
+                <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
+                <Route path="/help-center" element={<PublicLayout><HelpCenter /></PublicLayout>} />
+                <Route path="/methodology" element={<PublicLayout><Methodology /></PublicLayout>} />
+                <Route path="/changelog" element={<PublicLayout><Changelog /></PublicLayout>} />
+                <Route path="/status" element={<PublicLayout><Status /></PublicLayout>} />
+                <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
+                <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+                <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
+                <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </ProfileProvider>
+      </AppStoreProvider>
     </ThemeProvider>
   );
 }

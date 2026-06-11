@@ -3,10 +3,10 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
 import { getNode } from '@/lib/mockData';
-import { AppStoreProvider, useAppStore } from '@/lib/appStore';
-import { ProfileProvider, useProfile } from '@/lib/profile';
+import { useAppStore } from '@/lib/appStore';
+import { useProfile } from '@/lib/profile';
 import { NAV } from './nav';
-import { Logo, ThemeToggle, Avatar, Tooltip, ToastProvider, Toggle, useToast } from '@/ui/components';
+import { Logo, ThemeToggle, Avatar, Tooltip, Toggle, useToast } from '@/ui/components';
 import { CommandPalette } from '@/components/CommandPalette';
 
 function NavRow({
@@ -569,13 +569,5 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  return (
-    <AppStoreProvider>
-      <ProfileProvider>
-        <ToastProvider>
-          <Shell>{children}</Shell>
-        </ToastProvider>
-      </ProfileProvider>
-    </AppStoreProvider>
-  );
+  return <Shell>{children}</Shell>;
 }

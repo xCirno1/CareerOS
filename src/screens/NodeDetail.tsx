@@ -24,7 +24,6 @@ import {
   PATTERNS,
   EMPLOYERS,
   edgesOf,
-  CURRENT_NODE_ID,
   type NextAction,
   type NextHop,
   type NodeKind,
@@ -68,7 +67,7 @@ export function NodeDetail() {
   const { id } = useParams();
   const loading = useSimulatedLoading(950);
   const node = getNode(id ?? '');
-  const { isSaved, toggleSaved, addRecent, setTarget } = useAppStore();
+  const { isSaved, toggleSaved, addRecent, setTarget, careerProfile } = useAppStore();
   const toast = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
   const [doneSubtasks, setDoneSubtasks] = useState<Set<string>>(new Set());
@@ -125,6 +124,13 @@ export function NodeDetail() {
   const employers = EMPLOYERS.filter((e) => e.nodeId === node.id);
   const nextActions = getNextActions(node);
   const hops = getNextHops(node.id);
+  const currentNode = getNode(careerProfile.currentNodeId);
+  const userSkillText = careerProfile.skills.join(' ').toLowerCase();
+  const matchedSkills = node.topSkills.filter((skill) =>
+    userSkillText.includes(skill.toLowerCase().replace(/\s*\/\s*/g, ' ')) ||
+    userSkillText.includes(skill.toLowerCase()),
+  );
+  const missingSkills = node.topSkills.filter((skill) => !matchedSkills.includes(skill));
 
   const subKey = (actionId: string, i: number) => `${actionId}:${i}`;
   const actionDoneCount = (action: NextAction) =>
@@ -133,9 +139,11 @@ export function NodeDetail() {
   const completedActions = nextActions.filter(isActionDone).length;
   const actionProgress = Math.round((completedActions / nextActions.length) * 100);
 
-  const feasibility = inbound.length
+  const baseFeasibility = inbound.length
     ? Math.round(inbound.reduce((s, e) => s + e.feasibility, 0) / inbound.length)
     : node.match;
+  const skillFit = Math.round((matchedSkills.length / Math.max(node.topSkills.length, 1)) * 100);
+  const feasibility = Math.round(baseFeasibility * 0.7 + skillFit * 0.3);
 
   const makeTarget = () => {
     setTarget(node.id);
@@ -440,13 +448,35 @@ export function NodeDetail() {
                     <Tooltip key={s} side="top" multiline content={getSkillInfo(s)}>
                       <span
                         tabIndex={0}
-                        className="focus-ring inline-flex cursor-help items-center gap-1 rounded-full border border-line/10 bg-line/8 px-3 py-1.5 text-sm font-semibold text-ink-soft transition hover:border-line/25 hover:bg-line/15 hover:text-ink"
+                        className={cn(
+                          'focus-ring inline-flex cursor-help items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold transition hover:border-line/25 hover:bg-line/15 hover:text-ink',
+                          matchedSkills.includes(s)
+                            ? 'border-emerald-500/25 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400'
+                            : 'border-line/10 bg-line/8 text-ink-soft',
+                        )}
                       >
+                        {matchedSkills.includes(s) && <Icons.Check size={12} />}
                         {s}
                         <Icons.Info size={12} className="opacity-50" />
                       </span>
                     </Tooltip>
                   ))}
+                </div>
+                <div className="mt-3 rounded-2xl border border-line/10 bg-surface-2 p-3 text-xs leading-5 text-ink-soft">
+                  {matchedSkills.length ? (
+                    <>
+                      You already show evidence for{' '}
+                      <span className="font-bold text-ink">{matchedSkills.join(', ')}</span>.
+                    </>
+                  ) : (
+                    <>Your current profile does not prove this role's core skills yet.</>
+                  )}
+                  {missingSkills.length > 0 && (
+                    <>
+                      {' '}Next gap to close:{' '}
+                      <span className="font-bold text-ink">{missingSkills.slice(0, 2).join(', ')}</span>.
+                    </>
+                  )}
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <Prospect icon={Icons.Trophy} text="Strong upward mobility into leadership tracks" />
@@ -564,8 +594,11 @@ export function NodeDetail() {
                   tone={feasibility >= 65 ? 'emerald' : feasibility >= 50 ? 'amber' : 'wine'}
                 />
                 <p className="mt-3 text-sm text-ink-soft">
-                  Based on {inbound.length || 3} inbound transitions and people with a profile like{' '}
-                  <span className="font-semibold text-ink">{getNode(CURRENT_NODE_ID)?.title}</span>.
+                  Based on {inbound.length || 3} inbound transitions, skill overlap and your current
+                  position as{' '}
+                  <span className="font-semibold text-ink">
+                    {currentNode?.title ?? careerProfile.currentRole}
+                  </span>.
                 </p>
                 <p className="mt-3 rounded-2xl bg-line/8 px-3 py-2 text-xs font-semibold leading-5 text-ink-soft">
                   Route planning uses this score alongside transition time, salary uplift and role
