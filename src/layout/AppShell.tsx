@@ -5,9 +5,11 @@ import { Icons } from '@/lib/icons';
 import { getNode } from '@/lib/mockData';
 import { useAppStore } from '@/lib/appStore';
 import { useProfile } from '@/lib/profile';
+import { useSubscription, PLAN_META } from '@/lib/subscription';
 import { NAV } from './nav';
 import { Logo, ThemeToggle, Avatar, Tooltip, Toggle, useToast } from '@/ui/components';
 import { CommandPalette } from '@/components/CommandPalette';
+import { PlanBadge } from '@/components/PlanBadge';
 
 function NavRow({
   to,
@@ -140,10 +142,10 @@ type NotificationItem = {
   date: string;
   title: string;
   body: string;
+  detail: string;
   meta: string;
   time: string;
   icon: typeof Icons.Bell;
-  action?: string;
   unread: boolean;
 };
 
@@ -153,10 +155,11 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     date: 'FRI, 4 JUN 2026',
     title: 'Market shift detected',
     body: 'AI Application Engineer demand rose again. Review the updated route signals before choosing your next target.',
+    detail:
+      'Demand and salary signals for AI Application Engineer moved up in the latest mock market snapshot. CareerOS would use this to refresh your route confidence, highlight missing proof points, and suggest whether this role should move higher in your target shortlist.',
     meta: 'Signal: AI Application Engineer',
     time: 'Today 09:40',
     icon: Icons.TrendingUp,
-    action: 'VIEW',
     unread: true,
   },
   {
@@ -164,10 +167,11 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     date: 'WED, 2 JUN 2026',
     title: 'Route recommendation updated',
     body: 'Your Product Lead pathway now has a shorter recommended hop through Design Engineer.',
+    detail:
+      'The route engine found a cleaner bridge into Product Lead by using Design Engineer as an intermediate move. In a production version, this detail view would show the changed path, why the route improved, and which skills or portfolio evidence affected the recommendation.',
     meta: 'Route: Product Lead',
     time: '2 Jun 2026 18:55',
     icon: Icons.Route,
-    action: 'MORE INFO',
     unread: true,
   },
   {
@@ -175,10 +179,11 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     date: 'TUE, 1 JUN 2026',
     title: 'Profile signals refreshed',
     body: 'Your resume import added new skill evidence and refreshed your match calculations.',
+    detail:
+      'Your imported profile added stronger evidence for frontend systems, collaboration, and product-facing work. CareerOS would use those new signals to update mentor matches, route scores, and skill gaps across the app.',
     meta: 'Profile: Resume import',
     time: '1 Jun 2026 14:00',
     icon: Icons.Upload,
-    action: 'MORE INFO',
     unread: false,
   },
 ];
@@ -186,14 +191,25 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
 function NotificationMenu() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState(MOCK_NOTIFICATIONS);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const unread = items.filter((item) => item.unread).length;
-  useOutsidePointerDown(menuRef, open, () => setOpen(false));
+  const selectedItem = selectedId ? items.find((item) => item.id === selectedId) : null;
+
+  useOutsidePointerDown(menuRef, open, () => {
+    setOpen(false);
+    setSelectedId(null);
+  });
 
   return (
     <div ref={menuRef} className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((isOpen) => {
+            if (isOpen) setSelectedId(null);
+            return !isOpen;
+          });
+        }}
         className="focus-ring relative grid h-10 w-10 place-items-center rounded-2xl border border-line/12 bg-surface text-ink-soft transition hover:text-ink"
         aria-label="Notifications"
         aria-expanded={open}
@@ -206,62 +222,118 @@ function NotificationMenu() {
 
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-[23rem] animate-fade-up overflow-hidden rounded-xl border border-line/12 bg-surface shadow-glass">
-          <div className="flex items-center justify-between border-b border-line/10 px-4 py-3">
-            <div>
-              <span className="text-sm font-bold text-ink">Notifications</span>
-              <span className="ml-2 text-xs font-semibold text-ink-mute">{unread}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setItems((prev) => prev.map((item) => ({ ...item, unread: false })))}
-              className="text-xs font-bold text-brand hover:underline"
-            >
-              Mark all read
-            </button>
-          </div>
-
-          <div className="max-h-[28rem] overflow-y-auto">
-            {Array.from(new Set(items.map((item) => item.date))).map((date) => (
-              <div key={date}>
-                <div className="border-y border-line/10 bg-line/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
-                  {date}
+          {selectedItem ? (
+            <NotificationDetail item={selectedItem} onBack={() => setSelectedId(null)} />
+          ) : (
+            <>
+              <div className="flex items-center justify-between border-b border-line/10 px-4 py-3">
+                <div>
+                  <span className="text-sm font-bold text-ink">Notifications</span>
+                  <span className="ml-2 text-xs font-semibold text-ink-mute">{unread}</span>
                 </div>
-                <div className="divide-y divide-line/10">
-                  {items
-                    .filter((item) => item.date === date)
-                    .map((item) => (
-                      <NotificationRow
-                        key={item.id}
-                        item={item}
-                        onRead={() =>
-                          setItems((prev) =>
-                            prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n)),
-                          )
-                        }
-                      />
-                    ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setItems((prev) => prev.map((item) => ({ ...item, unread: false })))}
+                  className="text-xs font-bold text-brand hover:underline"
+                >
+                  Mark all read
+                </button>
               </div>
-            ))}
-          </div>
+
+              <div className="max-h-[28rem] overflow-y-auto">
+                {Array.from(new Set(items.map((item) => item.date))).map((date) => (
+                  <div key={date}>
+                    <div className="border-y border-line/10 bg-line/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
+                      {date}
+                    </div>
+                    <div className="divide-y divide-line/10">
+                      {items
+                        .filter((item) => item.date === date)
+                        .map((item) => (
+                          <NotificationRow
+                            key={item.id}
+                            item={item}
+                            onOpen={() => {
+                              setItems((prev) =>
+                                prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n)),
+                              );
+                              setSelectedId(item.id);
+                            }}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function NotificationRow({
+function NotificationDetail({
   item,
-  onRead,
+  onBack,
 }: {
   item: NotificationItem;
-  onRead: () => void;
+  onBack: () => void;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <>
+      <div className="flex items-center gap-2 border-b border-line/10 px-3 py-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="focus-ring grid h-8 w-8 place-items-center rounded-xl text-ink-mute transition hover:bg-line/8 hover:text-ink"
+          aria-label="Back to notifications"
+        >
+          <Icons.ArrowLeft size={16} />
+        </button>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-ink">Notification detail</p>
+          <p className="truncate text-xs text-ink-mute">{item.time}</p>
+        </div>
+      </div>
+
+      <div className="max-h-[28rem] overflow-y-auto p-4">
+        <div className="flex gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand/10 text-brand">
+            <Icon size={18} strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-extrabold leading-6 text-ink">{item.title}</p>
+            <p className="mt-1 text-xs font-semibold text-ink-mute">{item.meta}</p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-ink-soft">{item.body}</p>
+        <div className="mt-4 rounded-2xl border border-line/10 bg-surface-2 p-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-mute">
+            <Icons.Info size={13} /> Details
+          </p>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">{item.detail}</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function NotificationRow({
+  item,
+  onOpen,
+}: {
+  item: NotificationItem;
+  onOpen: () => void;
 }) {
   const Icon = item.icon;
   return (
     <button
       type="button"
-      onClick={onRead}
+      onClick={onOpen}
       className={cn(
         'relative flex w-full gap-3 px-4 py-4 text-left transition hover:bg-line/5',
         item.unread && 'bg-wine/[0.045]',
@@ -279,19 +351,9 @@ function NotificationRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-start justify-between gap-3">
           <span className="text-sm font-extrabold leading-5 text-ink">{item.title}</span>
-          <span
-            className={cn(
-              'mt-0.5 h-3 w-3 shrink-0 rounded-full border',
-              item.unread ? 'border-line/30 bg-line/20' : 'border-line/30',
-            )}
-          />
+          <Icons.ChevronRight size={15} className="mt-0.5 shrink-0 text-ink-mute" />
         </span>
         <span className="mt-1 block text-xs leading-5 text-ink-soft">{item.body}</span>
-        {item.action && (
-          <span className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-wine">
-            {item.action}
-          </span>
-        )}
         <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-mute">
           <span>{item.meta}</span>
           <span>{item.time}</span>
@@ -403,6 +465,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
   const { profile } = useProfile();
+  const { plan } = useSubscription();
   const role = profile.headline.split('·')[0].trim();
 
   // ⌘K / Ctrl-K opens the command palette
@@ -454,27 +517,52 @@ function Shell({ children }: { children: ReactNode }) {
             {!collapsed && 'Collapse'}
           </button>
           {collapsed ? (
-            <Tooltip content="Your profile" side="right">
+            <Tooltip content={`${profile.name} · ${PLAN_META[plan].label}`} side="right">
               <Link
                 to="/profile"
-                className="focus-ring flex justify-center rounded-2xl py-1 transition hover:bg-line/5"
-                aria-label="Your profile"
+                className="focus-ring relative flex justify-center rounded-2xl py-1 transition hover:bg-line/5"
+                aria-label={`Your profile — ${PLAN_META[plan].label} plan`}
               >
                 <Avatar name={profile.name} size={36} />
+                <span
+                  className={cn(
+                    'absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full ring-2 ring-surface',
+                    PLAN_META[plan].badgeClass,
+                  )}
+                >
+                  {(() => {
+                    const Icon = PLAN_META[plan].icon;
+                    return <Icon size={9} strokeWidth={2.8} />;
+                  })()}
+                </span>
               </Link>
             </Tooltip>
           ) : (
-            <Link
-              to="/profile"
-              className="focus-ring flex items-center gap-3 rounded-2xl bg-surface-2 p-2.5 transition hover:bg-line/8"
-            >
-              <Avatar name={profile.name} size={36} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-ink">{profile.name}</p>
-                <p className="truncate text-xs text-ink-mute">{role}</p>
-              </div>
-              <Icons.ChevronRight size={15} className="shrink-0 text-ink-mute" />
-            </Link>
+            <div className="rounded-2xl bg-surface-2 p-1.5">
+              <Link
+                to="/profile"
+                className="focus-ring flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-line/8"
+              >
+                <Avatar name={profile.name} size={36} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-bold text-ink">{profile.name}</p>
+                    <PlanBadge plan={plan} size="xs" />
+                  </div>
+                  <p className="truncate text-xs text-ink-mute">{role}</p>
+                </div>
+                <Icons.ChevronRight size={15} className="shrink-0 text-ink-mute" />
+              </Link>
+              {plan === 'free' && (
+                <Link
+                  to="/pricing"
+                  className="focus-ring mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand/10 px-3 py-1.5 text-xs font-bold text-brand transition hover:bg-brand/15"
+                >
+                  <Icons.Sparkles size={13} strokeWidth={2.4} />
+                  Upgrade to Pro
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </aside>
