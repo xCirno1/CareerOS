@@ -12,4 +12,5 @@ export const NAV: NavItem[] = [
   { to: '/routing', label: 'Pathways', icon: Icons.Route },
   { to: '/insights', label: 'Insights', icon: Icons.LineChart },
   { to: '/community', label: 'Community', icon: Icons.Users },
+  { to: '/mentors', label: 'Mentors', icon: Icons.Users },
 ];
