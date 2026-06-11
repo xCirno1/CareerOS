@@ -350,7 +350,10 @@ function Shell({ children }: { children: ReactNode }) {
 
       {/* ---- Mobile bottom tab bar ---- */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line/10 bg-surface/90 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5">
+        <div
+          className="mx-auto grid max-w-md"
+          style={{ gridTemplateColumns: `repeat(${NAV.length + 2}, minmax(0, 1fr))` }}
+        >
           <Link
             to="/"
             className={cn(
