@@ -34,7 +34,7 @@ import { Login } from '@/screens/Login';
 import { TransitionLab } from '@/screens/TransitionLab';
 import { Community } from '@/screens/Community';
 import { CommunityBrowse } from '@/screens/CommunityBrowse';
-import { MentorMatch } from '@/screens/Mentormatch';
+import { MentorMatch } from '@/screens/MentorMatch';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -43,84 +43,87 @@ function ShellRoute({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/_dev/transition-lab" element={<TransitionLab />} />
-          <Route
-            path="/map"
-            element={
-              <ShellRoute>
-                <TraileersMap />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/node/:id"
-            element={
-              <ShellRoute>
-                <NodeDetail />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/assessment"
-            element={
-              <ShellRoute>
-                <Assessment />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/routing"
-            element={
-              <ShellRoute>
-                <Routing />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <ShellRoute>
-                <Insights />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/community"
-            element={
-              <ShellRoute>
-                <Community />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/community/browse"
-            element={
-              <ShellRoute>
-                <CommunityBrowse />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/mentors"
-            element={
-              <ShellRoute>
-                <MentorMatch />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ShellRoute>
-                <Profile />
-              </ShellRoute>
-            }
-          />
+      <AppStoreProvider>
+        <ProfileProvider>
+          <ToastProvider>
+            <BrowserRouter basename={import.meta.env.BASE_URL}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/_dev/transition-lab" element={<TransitionLab />} />
+                <Route
+                  path="/map"
+                  element={
+                    <ShellRoute>
+                      <TraileersMap />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/node/:id"
+                  element={
+                    <ShellRoute>
+                      <NodeDetail />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/assessment"
+                  element={
+                    <ShellRoute>
+                      <Assessment />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/routing"
+                  element={
+                    <ShellRoute>
+                      <Routing />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/insights"
+                  element={
+                    <ShellRoute>
+                      <Insights />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/community"
+                  element={
+                    <ShellRoute>
+                      <Community />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/community/browse"
+                  element={
+                    <ShellRoute>
+                      <CommunityBrowse />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/mentors"
+                  element={
+                    <ShellRoute>
+                      <MentorMatch />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ShellRoute>
+                      <Profile />
+                    </ShellRoute>
+                  }
+                />
 
                 {/* Public Footer Routes */}
                 <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
@@ -142,8 +145,8 @@ export default function App() {
               </Routes>
             </BrowserRouter>
           </ToastProvider>
-        </ProfileProvider>
-      </AppStoreProvider>
-    </ThemeProvider>
+        </ProfileProvider >
+      </AppStoreProvider >
+    </ThemeProvider >
   );
 }
