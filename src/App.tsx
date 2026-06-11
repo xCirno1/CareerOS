@@ -30,6 +30,7 @@ import { Cookies } from '@/screens/Cookies';
 import { Login } from '@/screens/Login';
 import { TransitionLab } from '@/screens/TransitionLab';
 import { Community } from '@/screens/Community';
+import { CommunityBrowse } from '@/screens/CommunityBrowse';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -89,6 +90,14 @@ export default function App() {
             element={
               <ShellRoute>
                 <Community />
+              </ShellRoute>
+            }
+          />
+          <Route
+            path="/community/browse"
+            element={
+              <ShellRoute>
+                <CommunityBrowse />
               </ShellRoute>
             }
           />
