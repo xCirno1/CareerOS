@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type React from 'react';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
 import {
@@ -79,26 +80,35 @@ export function MapGraph({
     });
   };
 
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = wrapRef.current?.getBoundingClientRect();
-    zoomAt(
-      e.deltaY < 0 ? 1.1 : 0.9,
-      rect ? e.clientX - rect.left : undefined,
-      rect ? e.clientY - rect.top : undefined,
-    );
-  };
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      zoomAt(
+        e.deltaY < 0 ? 1.1 : 0.9,
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+      );
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, tx: t.x, ty: t.y };
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!drag.current) return;
+    const activeDrag = drag.current;
+    if (!activeDrag) return;
     setT((prev) => ({
       ...prev,
-      x: drag.current!.tx + (e.clientX - drag.current!.x),
-      y: drag.current!.ty + (e.clientY - drag.current!.y),
+      x: activeDrag.tx + (e.clientX - activeDrag.x),
+      y: activeDrag.ty + (e.clientY - activeDrag.y),
     }));
   };
   const onPointerUp = () => {
@@ -121,11 +131,11 @@ export function MapGraph({
     <div
       ref={wrapRef}
       className={cn(
-        'relative h-full w-full touch-none overflow-hidden rounded-3xl border border-line/10 bg-surface-2',
+        'relative h-full w-full select-none touch-none overflow-hidden rounded-3xl border border-line/10 bg-surface-2',
         'cursor-grab active:cursor-grabbing',
         className,
       )}
-      onWheel={onWheel}
+      onDragStart={(e) => e.preventDefault()}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

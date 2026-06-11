@@ -3,13 +3,21 @@ import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/lib/icons';
 import { useAppStore } from '@/lib/appStore';
-import { DEMAND_META, getNextActions, getNodeIcon, getNodeKindMeta, type CareerNode } from '@/lib/mockData';
+import {
+  DEMAND_META,
+  getNextActions,
+  getNodeIcon,
+  getNodeKindMeta,
+  getSkillInfo,
+  type CareerNode,
+} from '@/lib/mockData';
 import {
   Button,
   ProgressRing,
   Sparkline,
   Skeleton,
   SkeletonText,
+  Tooltip,
   useToast,
 } from '@/ui/components';
 
@@ -136,12 +144,15 @@ export function NodeSummary({ node }: { node: CareerNode }) {
         <span className="eyebrow">Top skills</span>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {node.topSkills.map((s) => (
-            <span
-              key={s}
-              className="rounded-full bg-line/8 px-2.5 py-1 text-xs font-semibold text-ink-soft"
-            >
-              {s}
-            </span>
+            <Tooltip key={s} side="top" multiline content={getSkillInfo(s)}>
+              <span
+                tabIndex={0}
+                className="focus-ring inline-flex cursor-help items-center gap-1 rounded-full border border-line/10 bg-line/8 px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-line/25 hover:bg-line/15 hover:text-ink"
+              >
+                {s}
+                <Icons.Info size={11} className="opacity-50" />
+              </span>
+            </Tooltip>
           ))}
         </div>
       </div>
