@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useAppStore } from '@/lib/appStore';
+import { useSubscription } from '@/lib/subscription';
 import { Button, Card, Badge, Tooltip, useToast } from '@/ui/components';
+import { Paywall } from '@/components/Paywall';
 import { NODES, getNode, getNodeIcon, type CareerNode } from '@/lib/mockData';
 
 type MatchStatus = 'none' | 'pending' | 'matched' | 'dismissed';
@@ -543,7 +545,7 @@ function MentorCard({
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line/10 pt-4">
         {status === 'none' && (
           <>
-            <Button size="sm" icon={Icons.Users} onClick={() => onRequest(mentor.id)}>
+            <Button size="sm" icon={Icons.GraduationCap} onClick={() => onRequest(mentor.id)}>
               Request match
             </Button>
             <button
@@ -586,6 +588,29 @@ const FILTERS: { id: FilterId; label: string }[] = [
 ];
 
 export function MentorMatch() {
+  const { isPro } = useSubscription();
+
+  if (!isPro) {
+    return (
+      <Paywall
+        requiredPlan="pro"
+        eyebrow="Mentor Match"
+        title="Define your mentor with Pro"
+        description="Matching with a real mentor, messaging them, and booking sessions is a Pro feature. Upgrade to unlock the full mentor flow tailored to your route."
+        perks={[
+          'Match with mentors mapped to your target route',
+          'Message mentors and share your route brief',
+          'Book and track sessions with an agenda',
+          'Recommended mentors ranked by fit',
+        ]}
+      />
+    );
+  }
+
+  return <MentorMatchContent />;
+}
+
+function MentorMatchContent() {
   const { careerProfile, target } = useAppStore();
   const toast = useToast();
   const currentNode = getNode(careerProfile.currentNodeId) ?? NODES[0];
@@ -678,7 +703,7 @@ export function MentorMatch() {
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-5">
-        <Badge tone="brand" icon={Icons.Users}>
+        <Badge tone="brand" icon={Icons.GraduationCap}>
           Mentor Match
         </Badge>
         <h1 className="mt-2.5 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
@@ -796,7 +821,7 @@ export function MentorMatch() {
       {visible.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-ink-mute">
-            <Icons.Users size={22} />
+            <Icons.GraduationCap size={22} />
           </span>
           <p className="text-sm font-bold text-ink">
             {filter === 'matched' ? 'No active matches yet' : 'No mentors found'}

@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
 import { AppStoreProvider } from '@/lib/appStore';
 import { ProfileProvider } from '@/lib/profile';
+import { SubscriptionProvider } from '@/lib/subscription';
 import { ToastProvider } from '@/ui/components';
 import { AppShell } from '@/layout/AppShell';
+import { PrototypeNotice } from '@/components/PrototypeNotice';
 import { Landing } from '@/screens/Landing';
 import { Onboarding } from '@/screens/Onboarding';
 import { TraileersMap } from '@/screens/TraileersMap';
@@ -45,6 +47,7 @@ export default function App() {
     <ThemeProvider>
       <AppStoreProvider>
         <ProfileProvider>
+          <SubscriptionProvider>
           <ToastProvider>
             <BrowserRouter basename={import.meta.env.BASE_URL}>
               <Routes>
@@ -143,8 +146,12 @@ export default function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+
+              {/* Global prototype affordance — present on every route */}
+              <PrototypeNotice />
             </BrowserRouter>
           </ToastProvider>
+          </SubscriptionProvider>
         </ProfileProvider >
       </AppStoreProvider >
     </ThemeProvider >
