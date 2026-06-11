@@ -10,6 +10,7 @@ import { NODES, getNode, getNodeIcon, type CareerNode } from '@/lib/mockData';
 
 type MatchStatus = 'none' | 'pending' | 'matched' | 'dismissed';
 type FilterId = 'all' | 'recommended' | 'matched';
+type VisibleMentor = { mentor: Mentor; score: number };
 
 interface Mentor {
   id: string;
@@ -595,8 +596,8 @@ export function MentorMatch() {
       <Paywall
         requiredPlan="pro"
         eyebrow="Mentor Match"
-        title="Define your mentor with Pro"
-        description="Matching with a real mentor, messaging them, and booking sessions is a Pro feature. Upgrade to unlock the full mentor flow tailored to your route."
+        title="Define your mentor"
+        description="Matching with a real mentor, messaging them, and booking sessions is part of the paid mentor flow tailored to your route."
         perks={[
           'Match with mentors mapped to your target route',
           'Message mentors and share your route brief',
@@ -699,6 +700,33 @@ function MentorMatchContent() {
   };
 
   const activeCount = Object.values(statuses).filter((s) => s === 'matched' || s === 'pending').length;
+  const visibleColumns: [VisibleMentor[], VisibleMentor[]] = [[], []];
+  visible.forEach((item, index) => {
+    visibleColumns[index % 2].push(item);
+  });
+
+  const renderMentorCard = ({ mentor, score }: VisibleMentor) => {
+    const relevantNodes = mentor.nodeIds
+      .map((id) => getNode(id))
+      .filter((n): n is CareerNode => Boolean(n));
+
+    return (
+      <MentorCard
+        key={mentor.id}
+        mentor={mentor}
+        score={score}
+        status={statuses[mentor.id] ?? 'none'}
+        relevantNodes={relevantNodes}
+        currentId={currentNode.id}
+        targetId={targetNode.id}
+        onRequest={request}
+        onDismiss={dismiss}
+        onAccept={accept}
+        onMessage={setMessageMentor}
+        onBook={setBookingMentor}
+      />
+    );
+  };
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6">
@@ -844,29 +872,16 @@ function MentorMatchContent() {
           </button>
         </div>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          {visible.map(({ mentor, score }) => {
-            const relevantNodes = mentor.nodeIds
-              .map((id) => getNode(id))
-              .filter((n): n is CareerNode => Boolean(n));
-            return (
-              <MentorCard
-                key={mentor.id}
-                mentor={mentor}
-                score={score}
-                status={statuses[mentor.id] ?? 'none'}
-                relevantNodes={relevantNodes}
-                currentId={currentNode.id}
-                targetId={targetNode.id}
-                onRequest={request}
-                onDismiss={dismiss}
-                onAccept={accept}
-                onMessage={setMessageMentor}
-                onBook={setBookingMentor}
-              />
-            );
-          })}
-        </div>
+        <>
+          <div className="grid gap-4 lg:hidden">{visible.map(renderMentorCard)}</div>
+          <div className="hidden items-start gap-4 lg:grid lg:grid-cols-2">
+            {visibleColumns.map((column, index) => (
+              <div key={index} className="grid gap-4">
+                {column.map(renderMentorCard)}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {messageMentor && (

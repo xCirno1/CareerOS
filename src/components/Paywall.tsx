@@ -26,20 +26,18 @@ export function Paywall({
   const meta = PLAN_META[requiredPlan];
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-16 text-center sm:py-24">
-      <span className="relative grid h-16 w-16 place-items-center rounded-3xl bg-brand/10 text-brand">
-        <Icons.ShieldCheck size={30} strokeWidth={1.9} />
-        <span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-surface ring-2 ring-canvas">
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-amber/20 text-[#8a6530] dark:text-amber">
-            <Icons.Sparkles size={13} strokeWidth={2.4} />
-          </span>
+      <div className="flex items-center gap-2 border-b border-brand/30 pb-2 text-brand">
+        <Icons.Route size={22} strokeWidth={2.2} />
+        <span className="font-mono text-[11px] font-extrabold uppercase tracking-[0.18em]">
+          Premium access
         </span>
-      </span>
+      </div>
 
       <div className="mt-5 flex items-center gap-2">
         <span className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-ink-mute">
           {eyebrow}
         </span>
-        <PlanBadge plan={requiredPlan} withIcon />
+        <PlanBadge plan={requiredPlan} />
       </div>
 
       <h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
@@ -49,7 +47,7 @@ export function Paywall({
 
       <Card className="mt-8 w-full max-w-md border-line/10 p-6 text-left">
         <p className="text-xs font-bold uppercase tracking-wide text-ink-mute">
-          What {meta.label} unlocks
+          What this unlocks
         </p>
         <ul className="mt-3 space-y-2.5">
           {perks.map((perk) => (
@@ -60,12 +58,12 @@ export function Paywall({
           ))}
         </ul>
         <Link to="/pricing" className="mt-6 block">
-          <Button block icon={Icons.Sparkles}>
-            Upgrade to {meta.label}
+          <Button block icon={Icons.ArrowUpRight}>
+            View plans
           </Button>
         </Link>
         <p className="mt-3 text-center text-xs text-ink-mute">
-          Prototype tip: open the Sandbox panel (bottom-right) to switch plans instantly.
+          Tip: open the Sandbox panel (bottom-right) to switch access instantly.
         </p>
       </Card>
     </div>
