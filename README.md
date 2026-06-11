@@ -3,7 +3,7 @@
 > [!CAUTION]
 > CareerOS is a prototype in active development. It does not have a backend yet, and everything currently runs on local mock data.
 
-CareerOS is a dark, interactive career-mapping product that turns a profile into a living career graph. It helps a user answer a surprisingly hard question:
+CareerOS is an interactive career-mapping product that turns a profile into a living career graph. It helps a user answer a surprisingly hard question:
 
 > Where can I go next, what would it take, and which path is actually worth the move?
 
