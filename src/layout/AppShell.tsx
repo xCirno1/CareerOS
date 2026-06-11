@@ -7,7 +7,7 @@ import { useAppStore } from '@/lib/appStore';
 import { useProfile } from '@/lib/profile';
 import { useSubscription, PLAN_META } from '@/lib/subscription';
 import { NAV } from './nav';
-import { Logo, ThemeToggle, Avatar, Tooltip, Toggle, useToast } from '@/ui/components';
+import { Logo, Avatar, Tooltip, Toggle, useToast } from '@/ui/components';
 import { CommandPalette } from '@/components/CommandPalette';
 import { PlanBadge } from '@/components/PlanBadge';
 
@@ -405,13 +405,15 @@ function ProfileMenu() {
             </Link>
 
             <div className="divide-y divide-line/10 px-2 py-1.5">
-              <div className="flex items-center justify-between gap-3 px-2 py-2.5">
-                <span className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-                  <Icons.Moon size={16} className="text-ink-mute" />
-                  Appearance
-                </span>
-                <ThemeToggle />
-              </div>
+              <Link
+                to="/appearance"
+                onClick={() => setOpen(false)}
+                className="focus-ring flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-line/5 hover:text-ink"
+              >
+                <Icons.Sparkles size={16} className="text-ink-mute" />
+                Theme &amp; display
+                <Icons.ChevronRight size={15} className="ml-auto shrink-0 text-ink-mute" />
+              </Link>
 
               <div className="flex items-center justify-between gap-3 px-2 py-2.5">
                 <span className="min-w-0">

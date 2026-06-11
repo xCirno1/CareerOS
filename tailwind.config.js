@@ -11,10 +11,12 @@ export default {
       },
       colors: {
         // Brand palette (carried over from the original concept)
+        // navy is the deep "primary" tone — now token-driven so the active
+        // color theme recolors solid CTAs / active nav without code changes.
         navy: {
-          DEFAULT: '#17324d',
-          600: '#214466',
-          700: '#1a3a5a',
+          DEFAULT: 'rgb(var(--c-navy) / <alpha-value>)',
+          600: 'rgb(var(--c-navy-600) / <alpha-value>)',
+          700: 'rgb(var(--c-navy-700) / <alpha-value>)',
         },
         teal: { DEFAULT: '#2f7f8f', soft: '#5aa6b3' },
         wine: { DEFAULT: '#7e3041', soft: '#94394e' },

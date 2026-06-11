@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
+import { AppearanceProvider } from '@/lib/appearance';
 import { AppStoreProvider } from '@/lib/appStore';
 import { ProfileProvider } from '@/lib/profile';
 import { SubscriptionProvider } from '@/lib/subscription';
@@ -8,6 +9,7 @@ import { ToastProvider } from '@/ui/components';
 import { AppShell } from '@/layout/AppShell';
 import { PrototypeNotice } from '@/components/PrototypeNotice';
 import { Landing } from '@/screens/Landing';
+import { Appearance } from '@/screens/Appearance';
 import { Onboarding } from '@/screens/Onboarding';
 import { TraileersMap } from '@/screens/TraileersMap';
 import { NodeDetail } from '@/screens/NodeDetail';
@@ -45,6 +47,7 @@ function ShellRoute({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
+      <AppearanceProvider>
       <AppStoreProvider>
         <ProfileProvider>
           <SubscriptionProvider>
@@ -127,6 +130,14 @@ export default function App() {
                     </ShellRoute>
                   }
                 />
+                <Route
+                  path="/appearance"
+                  element={
+                    <ShellRoute>
+                      <Appearance />
+                    </ShellRoute>
+                  }
+                />
 
                 {/* Public Footer Routes */}
                 <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
@@ -154,6 +165,7 @@ export default function App() {
           </SubscriptionProvider>
         </ProfileProvider >
       </AppStoreProvider >
+      </AppearanceProvider>
     </ThemeProvider >
   );
 }

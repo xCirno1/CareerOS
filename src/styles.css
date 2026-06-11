@@ -18,6 +18,12 @@
   --c-brand: 47 127 143;       /* teal */
   --c-accent: 242 185 94;      /* amber */
 
+  /* Deep "primary" tone behind solid CTAs / active nav (light mode). Now a
+     token so the color theme can recolor it without touching components. */
+  --c-navy: 23 50 77;          /* #17324d */
+  --c-navy-600: 33 68 102;     /* #214466 */
+  --c-navy-700: 26 58 90;      /* #1a3a5a */
+
   /* line is applied at 10% in components via /10 etc; keep raw rgb here */
   --scroll-bg: rgb(233 240 236);
 }
@@ -36,6 +42,211 @@
   --c-accent: 255 217 138;
 
   --scroll-bg: rgb(9 16 26);
+}
+
+/* ---- Color themes ---------------------------------------------------
+   A theme only re-points the brand / accent / navy tokens. Every component
+   already reads those tokens (text-brand, bg-navy, ring-brand, …) so the whole
+   app recolors with zero per-component conditionals. Each theme declares a
+   light variant (`[data-theme]`) and a brighter dark variant
+   (`.dark[data-theme]`) so contrast stays right in both modes. Token absence on
+   `:root` keeps the default teal theme. */
+
+/* Teal — the default, declared explicitly so the picker has a no-op match. */
+:root[data-theme='teal'] {
+  --c-brand: 47 127 143;
+  --c-accent: 242 185 94;
+  --c-navy: 23 50 77;
+  --c-navy-600: 33 68 102;
+  --c-navy-700: 26 58 90;
+}
+:root.dark[data-theme='teal'] {
+  --c-brand: 90 166 179;
+  --c-accent: 255 217 138;
+}
+
+/* Crimson */
+:root[data-theme='crimson'] {
+  --c-brand: 211 61 84;
+  --c-accent: 240 161 78;
+  --c-navy: 94 31 43;
+  --c-navy-600: 122 40 56;
+  --c-navy-700: 106 34 48;
+}
+:root.dark[data-theme='crimson'] {
+  --c-brand: 240 106 130;
+  --c-accent: 255 194 122;
+}
+
+/* Violet */
+:root[data-theme='violet'] {
+  --c-brand: 109 74 209;
+  --c-accent: 217 140 224;
+  --c-navy: 46 33 85;
+  --c-navy-600: 61 44 112;
+  --c-navy-700: 53 38 99;
+}
+:root.dark[data-theme='violet'] {
+  --c-brand: 155 130 240;
+  --c-accent: 236 179 242;
+}
+
+/* Emerald */
+:root[data-theme='emerald'] {
+  --c-brand: 31 157 107;
+  --c-accent: 242 193 78;
+  --c-navy: 20 64 47;
+  --c-navy-600: 28 86 64;
+  --c-navy-700: 24 74 56;
+}
+:root.dark[data-theme='emerald'] {
+  --c-brand: 76 196 146;
+  --c-accent: 255 217 122;
+}
+
+/* Slate — calm monochrome */
+:root[data-theme='slate'] {
+  --c-brand: 91 107 120;
+  --c-accent: 124 139 150;
+  --c-navy: 44 58 71;
+  --c-navy-600: 59 76 92;
+  --c-navy-700: 52 67 80;
+}
+:root.dark[data-theme='slate'] {
+  --c-brand: 138 160 176;
+  --c-accent: 170 184 194;
+}
+
+/* Sunset — gradient orange → rose */
+:root[data-theme='sunset'] {
+  --c-brand: 224 106 44;
+  --c-accent: 226 61 109;
+  --c-navy: 94 42 31;
+  --c-navy-600: 122 55 40;
+  --c-navy-700: 106 48 35;
+}
+:root.dark[data-theme='sunset'] {
+  --c-brand: 245 138 82;
+  --c-accent: 245 106 146;
+}
+
+/* Ocean — gradient blue → cyan */
+:root[data-theme='ocean'] {
+  --c-brand: 37 99 192;
+  --c-accent: 27 165 184;
+  --c-navy: 24 51 94;
+  --c-navy-600: 33 69 122;
+  --c-navy-700: 29 61 107;
+}
+:root.dark[data-theme='ocean'] {
+  --c-brand: 91 147 230;
+  --c-accent: 79 199 214;
+}
+
+/* Aurora — gradient violet → emerald */
+:root[data-theme='aurora'] {
+  --c-brand: 123 83 209;
+  --c-accent: 31 157 122;
+  --c-navy: 43 35 88;
+  --c-navy-600: 57 47 114;
+  --c-navy-700: 50 42 102;
+}
+:root.dark[data-theme='aurora'] {
+  --c-brand: 164 136 240;
+  --c-accent: 76 196 154;
+}
+
+/* ---- Background themes ----------------------------------------------
+   A background theme only re-points the neutral surface tokens
+   (canvas / surface / surface-2). Color themes own brand/accent; these own the
+   "paper". Light + dark variants per theme, applied to <html> via data-bg.
+   Default `mint` matches :root, declared so the picker has a no-op match. */
+
+:root[data-bg='mint'] {
+  --c-canvas: 233 240 236;
+  --c-surface: 255 255 255;
+  --c-surface-2: 237 245 242;
+}
+:root.dark[data-bg='mint'] {
+  --c-canvas: 9 16 26;
+  --c-surface: 18 28 41;
+  --c-surface-2: 24 36 52;
+}
+
+/* Snow — clean neutral grays */
+:root[data-bg='snow'] {
+  --c-canvas: 244 246 248;
+  --c-surface: 255 255 255;
+  --c-surface-2: 237 240 244;
+}
+:root.dark[data-bg='snow'] {
+  --c-canvas: 12 14 17;
+  --c-surface: 23 26 31;
+  --c-surface-2: 31 35 42;
+}
+
+/* Sand — warm cream */
+:root[data-bg='sand'] {
+  --c-canvas: 244 240 232;
+  --c-surface: 255 253 250;
+  --c-surface-2: 240 234 224;
+}
+:root.dark[data-bg='sand'] {
+  --c-canvas: 22 18 14;
+  --c-surface: 33 28 23;
+  --c-surface-2: 41 35 28;
+}
+
+/* Slate — cool blue-gray */
+:root[data-bg='slate'] {
+  --c-canvas: 234 238 243;
+  --c-surface: 255 255 255;
+  --c-surface-2: 226 232 240;
+}
+:root.dark[data-bg='slate'] {
+  --c-canvas: 11 15 20;
+  --c-surface: 20 27 36;
+  --c-surface-2: 27 35 46;
+}
+
+/* Blush — soft warm pink */
+:root[data-bg='blush'] {
+  --c-canvas: 247 240 242;
+  --c-surface: 255 254 255;
+  --c-surface-2: 242 233 236;
+}
+:root.dark[data-bg='blush'] {
+  --c-canvas: 20 14 17;
+  --c-surface: 31 23 27;
+  --c-surface-2: 40 30 35;
+}
+
+/* ---- Font scale -----------------------------------------------------
+   Scales the root font-size so every rem-based size (Tailwind text-*, gaps,
+   paddings) tracks the preference. Applied to <html> via data-font. */
+html {
+  font-size: 16px;
+}
+html[data-font='12'] {
+  font-size: 12px;
+}
+html[data-font='14'] {
+  font-size: 14px;
+}
+html[data-font='15'] {
+  font-size: 15px;
+}
+html[data-font='16'] {
+  font-size: 16px;
+}
+html[data-font='18'] {
+  font-size: 18px;
+}
+html[data-font='20'] {
+  font-size: 20px;
+}
+html[data-font='24'] {
+  font-size: 24px;
 }
 
 * {
@@ -66,6 +277,36 @@ select {
 
 svg {
   display: block;
+}
+
+.appearance-font-slider::-webkit-slider-runnable-track {
+  height: 1.5rem;
+  background: transparent;
+}
+
+.appearance-font-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.9rem;
+  height: 1.35rem;
+  margin-top: 0.075rem;
+  border: 2px solid rgb(var(--c-surface));
+  border-radius: 999px;
+  background: rgb(var(--c-brand));
+  box-shadow: 0 8px 22px rgb(var(--c-brand) / 0.32);
+}
+
+.appearance-font-slider::-moz-range-track {
+  height: 1.5rem;
+  background: transparent;
+}
+
+.appearance-font-slider::-moz-range-thumb {
+  width: 0.9rem;
+  height: 1.35rem;
+  border: 2px solid rgb(var(--c-surface));
+  border-radius: 999px;
+  background: rgb(var(--c-brand));
+  box-shadow: 0 8px 22px rgb(var(--c-brand) / 0.32);
 }
 
 /* Thin, themed scrollbar */
@@ -101,9 +342,14 @@ svg {
   .focus-ring {
     @apply outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
   }
-  /* gradient text */
+  /* gradient text — driven by the active theme's brand → accent tokens */
   .text-gradient {
-    @apply bg-gradient-to-br from-brand via-teal-soft to-accent bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, rgb(var(--c-brand)), rgb(var(--c-accent)));
+    @apply bg-clip-text text-transparent;
+  }
+  /* solid fill version of the same theme gradient (cards, swatches, previews) */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, rgb(var(--c-brand)), rgb(var(--c-accent)));
   }
 }
 
