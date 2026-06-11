@@ -20,7 +20,7 @@ import {
   getNode,
   getNodeIcon,
   getNodeKindMeta,
-  getRoutesTo,
+  getRoutesBetween,
   DEMAND_META,
   ASSESSMENT,
   type CareerNode,
@@ -150,12 +150,12 @@ function inferResumeImportPatch(file: File, text: string, profile: UserProfile):
 export function Profile() {
   const loading = useSimulatedLoading(700);
   const { profile, update, importResume } = useProfile();
-  const { saved, recents, target } = useAppStore();
+  const { saved, recents, target, careerProfile, updateCareerProfile } = useAppStore();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
-  const currentNode = getNode(profile.currentNodeId);
+  const currentNode = getNode(careerProfile.currentNodeId);
   const currentExp = profile.experience.find((e) => e.current) ?? profile.experience[0];
   const strength = profileStrength(profile);
   const links = profileLinks(profile);
@@ -173,7 +173,15 @@ export function Profile() {
   const reimportResume = async (file: File) => {
     try {
       const text = await readResumeText(file);
-      importResume(inferResumeImportPatch(file, text, profile));
+      const patch = inferResumeImportPatch(file, text, profile);
+      importResume(patch);
+      updateCareerProfile({
+        skills: patch.static?.skills?.map((skill) => skill.name) ?? careerProfile.skills,
+        yearsExperience: patch.static?.yearsExperience ?? careerProfile.yearsExperience,
+        currentRole: patch.editable?.headline?.split('·')[0].trim() || careerProfile.currentRole,
+        resumeName: file.name,
+        source: 'resume',
+      });
       toast(`Resume re-imported from ${file.name}`, { icon: Icons.Upload, tone: 'success' });
     } catch {
       toast('Could not read that resume file', { icon: Icons.Upload, tone: 'warn' });
@@ -391,7 +399,7 @@ export function Profile() {
 
         {/* RIGHT */}
         <div className="space-y-4">
-          <TargetCard targetId={target} />
+          <TargetCard currentId={careerProfile.currentNodeId} targetId={target} />
 
           {/* Priorities */}
           <Card className="p-5 sm:p-6">
@@ -789,10 +797,10 @@ function ExperienceRow({ exp, last }: { exp: ExperienceItem; last: boolean }) {
 /*  Target + languages                                                */
 /* ------------------------------------------------------------------ */
 
-function TargetCard({ targetId }: { targetId: string }) {
+function TargetCard({ currentId, targetId }: { currentId: string; targetId: string }) {
   const target = getNode(targetId);
   const grown = useGrow();
-  const routes = useMemo(() => getRoutesTo(targetId), [targetId]);
+  const routes = useMemo(() => getRoutesBetween(currentId, targetId), [currentId, targetId]);
   const route = routes.find((r) => r.recommended) ?? routes[0];
   if (!target) return null;
   const Icon = getIcon(getNodeIcon(target));

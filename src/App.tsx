@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
+import { AppStoreProvider } from '@/lib/appStore';
+import { ProfileProvider } from '@/lib/profile';
+import { ToastProvider } from '@/ui/components';
 import { AppShell } from '@/layout/AppShell';
 import { Landing } from '@/screens/Landing';
 import { Onboarding } from '@/screens/Onboarding';
@@ -39,96 +42,102 @@ function ShellRoute({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/_dev/transition-lab" element={<TransitionLab />} />
-          <Route
-            path="/map"
-            element={
-              <ShellRoute>
-                <TraileersMap />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/node/:id"
-            element={
-              <ShellRoute>
-                <NodeDetail />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/assessment"
-            element={
-              <ShellRoute>
-                <Assessment />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/routing"
-            element={
-              <ShellRoute>
-                <Routing />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <ShellRoute>
-                <Insights />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/community"
-            element={
-              <ShellRoute>
-                <Community />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/community/browse"
-            element={
-              <ShellRoute>
-                <CommunityBrowse />
-              </ShellRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ShellRoute>
-                <Profile />
-              </ShellRoute>
-            }
-          />
+      <AppStoreProvider>
+        <ProfileProvider>
+          <ToastProvider>
+            <BrowserRouter basename={import.meta.env.BASE_URL}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/_dev/transition-lab" element={<TransitionLab />} />
+                <Route
+                  path="/map"
+                  element={
+                    <ShellRoute>
+                      <TraileersMap />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/node/:id"
+                  element={
+                    <ShellRoute>
+                      <NodeDetail />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/assessment"
+                  element={
+                    <ShellRoute>
+                      <Assessment />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/routing"
+                  element={
+                    <ShellRoute>
+                      <Routing />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/insights"
+                  element={
+                    <ShellRoute>
+                      <Insights />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/community"
+                  element={
+                    <ShellRoute>
+                      <Community />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/community/browse"
+                  element={
+                    <ShellRoute>
+                      <CommunityBrowse />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ShellRoute>
+                      <Profile />
+                    </ShellRoute>
+                  }
+                />
 
-          {/* Public Footer Routes */}
-          <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
-          <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
-          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-          <Route path="/careers" element={<PublicLayout><Careers /></PublicLayout>} />
-          <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
-          <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
-          <Route path="/help-center" element={<PublicLayout><HelpCenter /></PublicLayout>} />
-          <Route path="/methodology" element={<PublicLayout><Methodology /></PublicLayout>} />
-          <Route path="/changelog" element={<PublicLayout><Changelog /></PublicLayout>} />
-          <Route path="/status" element={<PublicLayout><Status /></PublicLayout>} />
-          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
-          <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
-          <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
-          <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
+                {/* Public Footer Routes */}
+                <Route path="/trailers" element={<PublicLayout><Trailers /></PublicLayout>} />
+                <Route path="/pricing" element={<PublicLayout><Pricing /></PublicLayout>} />
+                <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+                <Route path="/careers" element={<PublicLayout><Careers /></PublicLayout>} />
+                <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
+                <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
+                <Route path="/help-center" element={<PublicLayout><HelpCenter /></PublicLayout>} />
+                <Route path="/methodology" element={<PublicLayout><Methodology /></PublicLayout>} />
+                <Route path="/changelog" element={<PublicLayout><Changelog /></PublicLayout>} />
+                <Route path="/status" element={<PublicLayout><Status /></PublicLayout>} />
+                <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
+                <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+                <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
+                <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </ProfileProvider>
+      </AppStoreProvider>
     </ThemeProvider>
   );
 }

@@ -32,6 +32,8 @@ export function MapGraph({
   selectedId,
   onSelect,
   highlightPath,
+  currentId = CURRENT_NODE_ID,
+  targetId = TARGET_NODE_ID,
   filterKinds,
   focusIds,
   className,
@@ -40,6 +42,8 @@ export function MapGraph({
   onSelect: (id: string) => void;
   /** ordered node ids to draw as the recommended/active route */
   highlightPath?: string[];
+  currentId?: string;
+  targetId?: string;
   filterKinds?: Set<string>;
   /** when set, only these node ids stay lit (others dim) */
   focusIds?: Set<string>;
@@ -180,8 +184,8 @@ export function MapGraph({
           {/* nodes */}
           {NODES.map((n) => {
             const sel = n.id === selectedId;
-            const isCurrent = n.id === CURRENT_NODE_ID;
-            const isTarget = n.id === TARGET_NODE_ID;
+            const isCurrent = n.id === currentId;
+            const isTarget = n.id === targetId;
             const kindMeta = getNodeKindMeta(n.kind);
             const r = (isCurrent || isTarget ? 30 : 24) + (n.kind === 'career' ? 2 : 0);
             const accent = ACCENT_HEX[n.accent];

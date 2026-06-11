@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
-import { ASSESSMENT, getNode, CURRENT_NODE_ID } from '@/lib/mockData';
+import { useAppStore } from '@/lib/appStore';
+import { useProfile } from '@/lib/profile';
+import { ASSESSMENT, getNode } from '@/lib/mockData';
 import {
   Button,
   Card,
@@ -19,6 +21,8 @@ const MAX_VISIBLE_SKILL_CHIPS = 10;
 const MAX_SELECTED_SKILLS = 10;
 
 export function Assessment() {
+  const { careerProfile, updateCareerProfile } = useAppStore();
+  const { update } = useProfile();
   const [step, setStep] = useState(0);
   const [computing, setComputing] = useState(false);
   const [done, setDone] = useState(false);
@@ -79,6 +83,18 @@ export function Assessment() {
   const submit = () => {
     setComputing(true);
     setTimeout(() => {
+      updateCareerProfile({
+        background: background === 'other' ? otherBackground : background ?? careerProfile.background,
+        skills: Array.from(skills),
+        yearsExperience: years,
+        currentRole: role,
+        priorities: Array.from(priorities),
+        source: 'assessment',
+      });
+      update({
+        headline: `${role} · ${years} yrs experience`,
+        priorities: Array.from(priorities),
+      });
       setComputing(false);
       setDone(true);
     }, 1600);
@@ -377,7 +393,7 @@ function Computing() {
           Triangulating your starting point…
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Comparing your profile against millions of career journeys.
+          Comparing your answers with the prototype career graph.
         </p>
         <div className="mx-auto mt-6 max-w-sm space-y-3 text-left">
           <SkeletonText lines={2} />
@@ -389,7 +405,9 @@ function Computing() {
 }
 
 function Result() {
-  const node = getNode(CURRENT_NODE_ID)!;
+  const { careerProfile } = useAppStore();
+  const node = getNode(careerProfile.currentNodeId)!;
+  const target = getNode(careerProfile.targetNodeId);
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
       <Card className="overflow-hidden">
@@ -404,6 +422,11 @@ function Result() {
             You’re a <span className="text-gradient">{node.title}</span>
           </h1>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">{node.summary}</p>
+          {target && (
+            <p className="mx-auto mt-2 max-w-md text-xs font-semibold text-ink-mute">
+              Best-fit target for now: {target.title}
+            </p>
+          )}
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link to="/map">
               <Button size="lg" icon={Icons.Network} iconRight={Icons.ArrowRight}>

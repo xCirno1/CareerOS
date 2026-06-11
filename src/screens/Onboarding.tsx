@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
+import { useAppStore } from '@/lib/appStore';
+import { useProfile } from '@/lib/profile';
 import { ASSESSMENT } from '@/lib/mockData';
 import { Button, TextField, Logo, ProgressRing } from '@/ui/components';
 import { gsap, prefersReducedMotion } from '@/lib/gsap';
@@ -29,6 +31,8 @@ const MAX_SELECTED_SKILLS = 10;
  */
 export function Onboarding() {
   const navigate = useNavigate();
+  const { updateCareerProfile } = useAppStore();
+  const { update } = useProfile();
   const [step, setStep] = useState(0);
   const [computing, setComputing] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +124,30 @@ export function Onboarding() {
     };
   }, [step]);
 
+  const persistProfile = () => {
+    const enteredName = name.trim();
+    const selectedPriorities = Array.from(priorities);
+    updateCareerProfile({
+      name: enteredName || 'CareerOS Explorer',
+      background: background === 'other' ? otherBackground : background ?? 'other',
+      skills: Array.from(skills),
+      yearsExperience: years,
+      currentRole: role,
+      priorities: selectedPriorities,
+      resumeName,
+      source: resumeName ? 'resume' : 'onboarding',
+    });
+    update({
+      ...(enteredName ? { name: enteredName } : {}),
+      headline: `${role} · ${years} yrs experience`,
+      priorities: selectedPriorities,
+      resumeFileName: resumeName,
+      resumeImportedAt: resumeName ? new Date().toISOString() : '',
+    });
+  };
+
   const finish = () => {
+    persistProfile();
     setComputing(true);
     setTimeout(() => navigate('/map'), 2100);
   };

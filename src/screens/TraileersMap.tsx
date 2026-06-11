@@ -1,14 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
 import { useAppStore } from '@/lib/appStore';
 import {
   NODES,
-  CURRENT_NODE_ID,
-  TARGET_NODE_ID,
   getNode,
-  ROUTES,
+  getRoutesBetween,
   type NodeKind,
 } from '@/lib/mockData';
 import { MapGraph } from '@/components/MapGraph';
@@ -26,17 +24,27 @@ const KIND_FILTERS: Segment<NodeKind | 'all'>[] = [
 export function TraileersMap() {
   const loading = useSimulatedLoading(1000);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const { saved } = useAppStore();
-  const [selectedId, setSelectedId] = useState<string | null>(CURRENT_NODE_ID);
+  const { saved, careerProfile, target } = useAppStore();
+  const currentId = careerProfile.currentNodeId;
+  const targetId = target || careerProfile.targetNodeId;
+  const [selectedId, setSelectedId] = useState<string | null>(currentId);
   const [kind, setKind] = useState<NodeKind | 'all'>('all');
   const [showRoute, setShowRoute] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [focusSaved, setFocusSaved] = useState(false);
 
   const selected = selectedId ? getNode(selectedId) : null;
-  const recommended = ROUTES.find((r) => r.recommended)!;
+  const routes = getRoutesBetween(currentId, targetId);
+  const recommended = routes.find((r) => r.recommended) ?? routes[0];
   const filterKinds = kind === 'all' ? undefined : new Set([kind]);
   const focusIds = focusSaved && saved.length ? new Set(saved) : undefined;
+  const quickNodeIds = Array.from(
+    new Set([currentId, targetId, ...NODES.map((n) => n.id)]),
+  );
+
+  useEffect(() => {
+    setSelectedId((prev) => prev ?? currentId);
+  }, [currentId]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 p-4 sm:p-6">
@@ -44,7 +52,7 @@ export function TraileersMap() {
         eyebrow="Traileers™ Map"
         icon={Icons.Network}
         title="Your career landscape"
-        subtitle="Each point is a job, career or route. Lines are transitions real people have made."
+        subtitle={`Starting from ${getNode(currentId)?.title ?? 'your profile'} and routing toward ${getNode(targetId)?.title ?? 'your target'}.`}
         actions={
           <>
             <Button
@@ -99,7 +107,7 @@ export function TraileersMap() {
         />
         <div className="hidden items-center gap-2 text-xs font-semibold text-ink-mute sm:flex">
           <Icons.Sparkles size={14} className="text-amber" />
-          Recommended route: {recommended.label}
+          Recommended route: {recommended?.label ?? 'Choose a reachable target'}
         </div>
       </div>
 
@@ -117,7 +125,9 @@ export function TraileersMap() {
             <MapGraph
               selectedId={selectedId}
               onSelect={setSelectedId}
-              highlightPath={showRoute ? recommended.path : undefined}
+              highlightPath={showRoute ? recommended?.path : undefined}
+              currentId={currentId}
+              targetId={targetId}
               filterKinds={filterKinds}
               focusIds={focusIds}
             />
@@ -148,7 +158,7 @@ export function TraileersMap() {
       {/* quick legend chips on mobile */}
       {!loading && (
         <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
-          {[CURRENT_NODE_ID, TARGET_NODE_ID, ...NODES.filter((n) => n.id !== CURRENT_NODE_ID && n.id !== TARGET_NODE_ID).map((n) => n.id)].map(
+          {quickNodeIds.map(
             (id) => {
               const n = getNode(id)!;
               const active = id === selectedId;

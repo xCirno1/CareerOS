@@ -529,24 +529,26 @@ function enumeratePaths(fromId: string, toId: string, maxHops = 3): string[][] {
 }
 
 /**
- * Routes to a given target. Curated routes win when they exist (e.g. the
- * default Product Lead target); otherwise we synthesise routes from the graph
- * so *any* reachable target produces a real, ranked plan.
+ * Routes between two nodes. Curated routes win for the default prototype
+ * story; otherwise we synthesise routes from the graph so any reachable target
+ * produces a real, ranked plan.
  */
-export function getRoutesTo(toId: string): Route[] {
-  const curated = ROUTES.filter((r) => r.path[r.path.length - 1] === toId);
+export function getRoutesBetween(fromId: string, toId: string): Route[] {
+  const curated = ROUTES.filter(
+    (r) => r.path[0] === fromId && r.path[r.path.length - 1] === toId,
+  );
   if (curated.length) return curated;
 
-  const from = getNode(CURRENT_NODE_ID);
+  const from = getNode(fromId);
   const target = getNode(toId);
-  if (!from || !target || toId === CURRENT_NODE_ID) return [];
+  if (!from || !target || toId === fromId) return [];
 
   const fromMid = midSalary(from);
   const targetMid = midSalary(target);
   const salaryDelta =
     fromMid && targetMid ? Math.round(((targetMid - fromMid) / fromMid) * 100) : 0;
 
-  const built = enumeratePaths(CURRENT_NODE_ID, toId).map((path): Route => {
+  const built = enumeratePaths(fromId, toId).map((path): Route => {
     let feasProduct = 1;
     let months = 0;
     for (let i = 0; i < path.length - 1; i++) {
@@ -601,6 +603,11 @@ export function getRoutesTo(toId: string): Route[] {
   const top = built.slice(0, 3);
   if (top[0]) top[0] = { ...top[0], recommended: true };
   return top;
+}
+
+/** Backwards-compatible default-target helper used by older surfaces. */
+export function getRoutesTo(toId: string): Route[] {
+  return getRoutesBetween(CURRENT_NODE_ID, toId);
 }
 
 export interface Employer {
