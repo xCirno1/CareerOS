@@ -197,7 +197,7 @@ export function Profile() {
       {/* ---------- Cover / hero ---------- */}
       <Card className="overflow-hidden">
         <div
-          className="relative h-32 sm:h-40"
+          className="relative h-36 sm:h-44"
           style={{
             background:
               'linear-gradient(120deg, rgb(var(--c-navy)) 0%, rgb(var(--c-brand)) 55%, rgb(var(--c-accent)) 120%)',
@@ -216,13 +216,13 @@ export function Profile() {
               Open to work
             </span>
           )}
+          <div className="absolute bottom-0 left-5 translate-y-1/2 rounded-full ring-4 ring-surface sm:left-7">
+            <Avatar name={profile.name} size={104} className="!bg-amber !text-navy text-3xl shadow-glass" />
+          </div>
         </div>
 
-        <div className="px-5 pb-5 sm:px-7 sm:pb-7">
-          <div className="-mt-12 flex flex-wrap items-end gap-4 sm:-mt-14">
-            <div className="rounded-full ring-4 ring-surface">
-              <Avatar name={profile.name} size={104} className="text-3xl shadow-glass" />
-            </div>
+        <div className="px-5 pb-5 pt-16 sm:px-7 sm:pb-7">
+          <div className="flex flex-wrap items-end gap-4">
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
@@ -244,7 +244,7 @@ export function Profile() {
                 <Meta icon={Icons.GraduationCap}>{profile.backgroundLabel}</Meta>
               </div>
             </div>
-            <div className="flex shrink-0 gap-2 pb-1">
+            <div className="flex shrink-0 flex-wrap gap-2 pb-1">
               <input
                 ref={resumeInputRef}
                 type="file"

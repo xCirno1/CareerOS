@@ -1,4 +1,5 @@
 # CareerOS
+[![Deploy to GitHub Pages](https://github.com/xCirno1/CareerOS/actions/workflows/deploy.yml/badge.svg)](https://github.com/xCirno1/CareerOS/actions/workflows/deploy.yml)
 
 > [!CAUTION]
 > CareerOS is a prototype in active development. It does not have a backend yet, and everything currently runs on local mock data.
