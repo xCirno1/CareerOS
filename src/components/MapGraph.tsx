@@ -103,6 +103,7 @@ export function MapGraph({
   }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('[data-map-control]')) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, tx: t.x, ty: t.y };
   };
@@ -270,7 +271,13 @@ export function MapGraph({
       </svg>
 
       {/* zoom controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-1.5">
+      <div
+        className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5"
+        data-map-control
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerMove={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+      >
         <ZoomBtn icon={Icons.Plus} onClick={() => zoomAt(1.2)} label="Zoom in" />
         <ZoomBtn icon={Icons.Minus} onClick={() => zoomAt(0.83)} label="Zoom out" />
         <ZoomBtn icon={Icons.Maximize2} onClick={fit} label="Fit" />
@@ -403,7 +410,13 @@ function ZoomBtn({
 }) {
   return (
     <button
-      onClick={onClick}
+      type="button"
+      data-map-control
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       aria-label={label}
       className="focus-ring grid h-9 w-9 place-items-center rounded-xl border border-line/10 bg-surface text-ink-soft shadow-soft transition hover:text-ink"
     >
