@@ -34,6 +34,7 @@ import { Login } from '@/screens/Login';
 import { TransitionLab } from '@/screens/TransitionLab';
 import { Community } from '@/screens/Community';
 import { CommunityBrowse } from '@/screens/CommunityBrowse';
+import { MentorMatch } from '@/screens/MentorMatch';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -108,6 +109,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/mentors"
+                  element={
+                    <ShellRoute>
+                      <MentorMatch />
+                    </ShellRoute>
+                  }
+                />
+                <Route
                   path="/profile"
                   element={
                     <ShellRoute>
@@ -136,8 +145,8 @@ export default function App() {
               </Routes>
             </BrowserRouter>
           </ToastProvider>
-        </ProfileProvider>
-      </AppStoreProvider>
-    </ThemeProvider>
+        </ProfileProvider >
+      </AppStoreProvider >
+    </ThemeProvider >
   );
 }
