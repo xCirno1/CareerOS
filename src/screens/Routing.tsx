@@ -11,6 +11,7 @@ import {
   getNode,
   getRoutesBetween,
   TARGET_NODE_ID,
+  type CareerNode,
   type Route as RouteType,
 } from '@/lib/mockData';
 import { MapGraph } from '@/components/MapGraph';
@@ -28,6 +29,13 @@ const EDGE_KIND_ICON: Record<string, typeof Icons.ChevronsRight> = {
   promotion: Icons.TrendingUp,
   pivot: Icons.GitBranch,
   study: Icons.GraduationCap,
+};
+
+const NODE_ACCENT_DOT: Record<CareerNode['accent'], string> = {
+  teal: 'bg-teal',
+  amber: 'bg-amber',
+  wine: 'bg-wine',
+  navy: 'bg-navy dark:bg-brand',
 };
 
 function priorityScore(route: RouteType, priorities: string[]) {
@@ -69,6 +77,9 @@ export function Routing() {
     routesForTarget.find((r) => r.id === selectedRouteId) ??
     routesForTarget.find((r) => r.recommended) ??
     routesForTarget[0];
+  const routeHeaderNodes = (selectedRoute?.path ?? (from.id === to.id ? [from.id] : [from.id, to.id]))
+    .map((id) => getNode(id))
+    .filter((node): node is CareerNode => Boolean(node));
 
   useEffect(() => {
     if (loading || !rootRef.current || prefersReducedMotion()) return;
@@ -138,9 +149,19 @@ export function Routing() {
           targetPickerOpen && 'relative z-50',
         )}
       >
-        <RouteEndpoint label="From" node={from.title} tone="teal" />
-        <Icons.ArrowRight size={18} className="text-ink-mute" />
-        <RouteEndpoint label="Target" node={to.title} tone="amber" />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {routeHeaderNodes.map((node, i) => {
+            const isFirst = i === 0;
+            const isLast = i === routeHeaderNodes.length - 1;
+            const label = isFirst ? 'From' : isLast ? 'Target' : routeHeaderNodes.length > 3 ? `Step ${i}` : 'Via';
+            return (
+              <div key={`${node.id}-${i}`} className="flex min-w-0 items-center gap-2">
+                <RouteEndpoint label={label} node={node} />
+                {!isLast && <Icons.ArrowRight size={18} className="shrink-0 text-ink-mute" />}
+              </div>
+            );
+          })}
+        </div>
         <div className="relative ml-auto">
           <Button
             size="sm"
@@ -267,23 +288,21 @@ export function Routing() {
 function RouteEndpoint({
   label,
   node,
-  tone,
 }: {
   label: string;
-  node: string;
-  tone: 'teal' | 'amber';
+  node: CareerNode;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-2">
+    <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-2">
       <span
         className={cn(
           'h-2.5 w-2.5 rounded-full',
-          tone === 'teal' ? 'bg-teal' : 'bg-amber',
+          NODE_ACCENT_DOT[node.accent],
         )}
       />
-      <div>
+      <div className="min-w-0">
         <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">{label}</div>
-        <div className="text-sm font-bold text-ink">{node}</div>
+        <div className="truncate text-sm font-bold text-ink">{node.title}</div>
       </div>
     </div>
   );
