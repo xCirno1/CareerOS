@@ -112,6 +112,9 @@ import {
   CalendarPlus,
   Circle,
   Repeat,
+  MousePointerClick,
+  Undo2,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -223,6 +226,9 @@ export const Icons = {
   CalendarPlus,
   Circle,
   Repeat,
+  MousePointerClick,
+  Undo2,
+  AlertTriangle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icons;

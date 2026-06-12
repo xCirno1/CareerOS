@@ -16,8 +16,7 @@ import {
   daysUntil,
   formatCountdown,
   toISODate,
-  cellDate,
-  TODAY_DAY_INDEX,
+  TODAY,
 } from '@/lib/timetable.utils';
 import { cn } from '@/lib/cn';
 import { NODES, getNode, getNodeIcon } from '@/lib/mockData';
@@ -48,22 +47,29 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const UPLOAD_KEY = 'careeros-timetable-upload';
+
 function CalendarsTab() {
   const { calendars, connectCalendar } = useTimetable();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<string | null>(() => localStorage.getItem(UPLOAD_KEY));
+
+  function saveUpload(name: string) {
+    setUploadedFile(name);
+    localStorage.setItem(UPLOAD_KEY, name);
+  }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) setUploadedFile(file.name);
+    if (file) saveUpload(file.name);
   }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setUploadedFile(file.name);
+    if (file) saveUpload(file.name);
   }
 
   const providerIcon: Record<string, LucideIcon> = {
@@ -116,18 +122,13 @@ function CalendarsTab() {
           const Icon = providerIcon[cal.provider] ?? Icons.Calendar;
           return (
             <div key={cal.id} className="flex items-center gap-2.5 rounded-2xl border border-line/10 bg-surface px-3 py-2.5">
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                style={{ background: `${cal.color}1A`, color: cal.color }}
-              >
-                <Icon size={16} />
-              </div>
+              <Icon size={17} className="shrink-0" style={{ color: cal.color }} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold text-ink">{cal.name}</div>
                 <div className="text-[10px] text-ink-mute">{cal.email ?? (cal.connected ? 'Synced' : 'Not connected')}</div>
               </div>
               {cal.connected ? (
-                <span className="flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand">
+                <span className="flex items-center gap-1 text-[10px] font-medium text-brand">
                   <Icons.Check size={11} /> Synced
                 </span>
               ) : (
@@ -164,19 +165,26 @@ function CalendarsTab() {
 function ChannelAvatar({ initials, colorClass }: { initials: string; colorClass: string }) {
   const colors = COMPANY_COLORS[colorClass] ?? { bg: '#F1EFE8', text: '#444441' };
   return (
-    <div
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold"
-      style={{ background: colors.bg, color: colors.text }}
-    >
+    <span className="w-8 shrink-0 text-[10px] font-semibold tracking-wide" style={{ color: colors.text }}>
       {initials}
-    </div>
+    </span>
   );
 }
 
+const DISCOVER_PAGE = 5; // channels revealed per "Load more"
+
 function EventsTab() {
   const { companies, toggleCompany, addToLibrary, removeFromLibrary } = useTimetable();
+  const [query, setQuery] = useState('');
+  const [visible, setVisible] = useState(DISCOVER_PAGE);
+
   const library = companies.filter(c => c.inLibrary);
-  const discover = companies.filter(c => !c.inLibrary);
+  const q = query.trim().toLowerCase();
+  const discoverAll = companies.filter(
+    c => !c.inLibrary && (!q || c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)),
+  );
+  const discover = discoverAll.slice(0, visible);
+  const hasMore = discoverAll.length > discover.length;
 
   return (
     <div className="p-4">
@@ -212,9 +220,31 @@ function EventsTab() {
       )}
 
       <SectionLabel>Discover</SectionLabel>
+
+      <div className="relative mb-2">
+        <Icons.Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setVisible(DISCOVER_PAGE); }}
+          placeholder="Search companies…"
+          className="focus-ring h-9 w-full rounded-xl border border-line/15 bg-surface pl-9 pr-8 text-xs text-ink outline-none transition focus:border-brand/50"
+        />
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setVisible(DISCOVER_PAGE); }}
+            aria-label="Clear search"
+            className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-ink-mute transition hover:bg-line/10 hover:text-ink"
+          >
+            <Icons.X size={14} />
+          </button>
+        )}
+      </div>
+
       <div className="space-y-1">
-        {discover.length === 0 ? (
-          <p className="text-[11px] text-ink-mute">You've added every channel.</p>
+        {discoverAll.length === 0 ? (
+          <p className="text-[11px] text-ink-mute">
+            {q ? `No channels match “${query}”.` : "You've added every channel."}
+          </p>
         ) : discover.map(c => (
           <div key={c.id} className="flex items-center gap-2.5 rounded-xl px-1 py-2">
             <ChannelAvatar initials={c.initials} colorClass={c.colorClass} />
@@ -231,6 +261,15 @@ function EventsTab() {
           </div>
         ))}
       </div>
+
+      {hasMore && (
+        <button
+          onClick={() => setVisible(v => v + DISCOVER_PAGE)}
+          className="focus-ring mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-line/12 py-2 text-[11px] font-semibold text-ink-soft transition hover:bg-line/5"
+        >
+          <Icons.ChevronDown size={13} /> Load more ({discoverAll.length - discover.length})
+        </button>
+      )}
     </div>
   );
 }
@@ -239,7 +278,10 @@ function CoachTab({ onOpenMentors }: { onOpenMentors: () => void }) {
   const {
     targetNode, focusSkills, toggleFocusSkill,
     aiSuggestions, aiLoading, aiSummary, runAIOptimization, applySuggestion, dismissSuggestion,
+    pendingPlacement, beginManualPlacement, cancelPlacement,
   } = useTimetable();
+  // Which suggestion is mid "auto vs manual" choice.
+  const [choosingId, setChoosingId] = useState<string | null>(null);
 
   return (
     <div className="p-4">
@@ -298,17 +340,56 @@ function CoachTab({ onOpenMentors }: { onOpenMentors: () => void }) {
                 >
                   <div className="mb-1.5 flex items-center gap-2">
                     <span
-                      className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold"
-                      style={{ background: colors.bg, color: colors.text }}
+                      className="flex items-center gap-1 text-[10px] font-semibold"
+                      style={{ color: colors.accent }}
                     >
                       <Icon size={11} strokeWidth={2.4} /> {s.title}
                     </span>
                   </div>
                   <p className="mb-2.5 text-[11px] leading-relaxed text-ink-soft">{s.reason}</p>
-                  {!s.applied ? (
+                  {s.applied ? (
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
+                      <Icons.Check size={12} /> Added to your week
+                    </span>
+                  ) : pendingPlacement?.id === s.id ? (
+                    <div className="flex items-center gap-2 rounded-lg bg-brand/10 px-2.5 py-1.5 text-[11px] font-medium text-brand">
+                      <Icons.MousePointerClick size={13} className="shrink-0" />
+                      <span className="min-w-0 flex-1">Click a slot on your timetable…</span>
+                      <button
+                        onClick={cancelPlacement}
+                        className="focus-ring shrink-0 rounded-md px-1.5 py-0.5 font-semibold transition hover:bg-brand/15"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : choosingId === s.id ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-medium text-ink-soft">How should I add it?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { applySuggestion(s.id); setChoosingId(null); }}
+                          className="focus-ring flex flex-1 items-center justify-center gap-1 rounded-lg bg-navy py-1.5 text-[11px] font-semibold text-white transition hover:bg-navy-600 dark:bg-brand dark:text-navy"
+                        >
+                          <Icons.Sparkles size={12} /> Automatic
+                        </button>
+                        <button
+                          onClick={() => { beginManualPlacement(s.id); setChoosingId(null); }}
+                          className="focus-ring flex flex-1 items-center justify-center gap-1 rounded-lg border border-line/15 py-1.5 text-[11px] font-semibold text-ink-soft transition hover:bg-line/5"
+                        >
+                          <Icons.MousePointerClick size={12} /> Pick a slot
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setChoosingId(null)}
+                        className="focus-ring w-full rounded-lg py-1 text-[11px] font-medium text-ink-mute transition hover:text-ink-soft"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  ) : (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => applySuggestion(s.id)}
+                        onClick={() => setChoosingId(s.id)}
                         className="focus-ring flex-1 rounded-lg bg-navy py-1.5 text-[11px] font-semibold text-white transition hover:bg-navy-600 dark:bg-brand dark:text-navy"
                       >
                         Add to week
@@ -320,10 +401,6 @@ function CoachTab({ onOpenMentors }: { onOpenMentors: () => void }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
-                      <Icons.Check size={12} /> Added to your week
-                    </span>
                   )}
                 </div>
               );
@@ -347,7 +424,7 @@ function PlanTab({ onOpenNode }: { onOpenNode: (id: string) => void }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState<MilestoneType>('deadline');
-  const [date, setDate] = useState(toISODate(cellDate(0, TODAY_DAY_INDEX)));
+  const [date, setDate] = useState(toISODate(TODAY));
 
   const sorted = [...milestones].sort((a, b) => a.date.localeCompare(b.date));
 
@@ -411,12 +488,7 @@ function PlanTab({ onOpenNode }: { onOpenNode: (id: string) => void }) {
             return (
               <div key={m.id} className="group rounded-2xl border border-line/10 bg-surface p-3">
                 <div className="flex items-start gap-2.5">
-                  <span
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                    style={{ background: `${meta.accent}1A`, color: meta.accent }}
-                  >
-                    <MIcon size={16} strokeWidth={2.2} />
-                  </span>
+                  <MIcon size={17} strokeWidth={2.2} className="mt-0.5 shrink-0" style={{ color: meta.accent }} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs font-semibold text-ink">{m.title}</div>
                     <div className="text-[10px] text-ink-mute">{meta.label}</div>
@@ -480,9 +552,7 @@ function EditorHeader({ event, onClose, title }: { event: TimetableEvent; onClos
       >
         <Icons.ChevronLeft size={18} />
       </button>
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: colors.bg, color: colors.text }}>
-        <Icon size={15} strokeWidth={2.2} />
-      </div>
+      <Icon size={17} strokeWidth={2.2} className="shrink-0" style={{ color: colors.accent }} />
       <span className="flex-1 truncate text-sm font-semibold text-ink">{title}</span>
     </div>
   );
@@ -497,9 +567,7 @@ function LinkedNodeButton({ nodeId, onOpenNode }: { nodeId: string; onOpenNode: 
       onClick={() => onOpenNode(node.id)}
       className="focus-ring flex w-full items-center gap-2.5 rounded-2xl border border-line/12 bg-surface p-3 text-left transition hover:border-brand/40"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-        <NodeIcon size={17} strokeWidth={2.2} />
-      </span>
+      <NodeIcon size={18} strokeWidth={2.2} className="shrink-0 text-brand" />
       <span className="min-w-0 flex-1">
         <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-mute">Linked role</span>
         <span className="block truncate text-sm font-semibold text-ink">{node.title}</span>

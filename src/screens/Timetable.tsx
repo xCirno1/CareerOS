@@ -3,22 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { TimetableProvider, useTimetable } from '@/lib/TimetableContext';
 import { WeekGrid } from '@/ui/components/timetable/WeekGrid';
 import { RightPanel } from '@/ui/components/timetable/RightPanel';
+import { ConflictDialog } from '@/ui/components/timetable/ConflictDialog';
 import { Icons } from '@/lib/icons';
-import { ProgressRing } from '@/ui/components';
+import { ProgressRing, useToast } from '@/ui/components';
 import { useMediaQuery } from '@/lib/hooks';
 import { cn } from '@/lib/cn';
-import { formatWeekLabel, TODAY_DAY_INDEX, isCareerEvent } from '@/lib/timetable.utils';
+import { formatWeekLabel, DEFAULT_DAY_INDEX, isCareerEvent } from '@/lib/timetable.utils';
 
 const topBtn =
   'focus-ring inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-line/15 bg-surface px-3 text-[13px] font-medium text-ink-soft transition hover:bg-line/5';
 
 function TimetableInner() {
-  const { addEvent, events, removeEvent, targetNode, targetReadiness, isComplete } = useTimetable();
+  const { addEvent, events, removeEvent, targetNode, targetReadiness, isComplete, pendingPlacement, undo, canUndo } = useTimetable();
   const navigate = useNavigate();
+  const toast = useToast();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [viewWeek, setViewWeek] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Manual placement needs the grid: drop the mobile sheet so it's reachable.
+  useEffect(() => {
+    if (pendingPlacement) setSheetOpen(false);
+  }, [pendingPlacement]);
 
   function select(id: string | null) {
     setSelectedId(id);
@@ -30,10 +37,17 @@ function TimetableInner() {
     setViewWeek(updater);
   }
 
+  function handleUndo() {
+    if (!canUndo) return;
+    undo();
+    setSelectedId(null);
+    toast('Change undone', { icon: Icons.Undo2, tone: 'info' });
+  }
+
   function handleAdd() {
     const ev = addEvent({
       title: 'New event', subtitle: '',
-      day: viewWeek === 0 ? TODAY_DAY_INDEX : 0,
+      day: viewWeek === 0 ? DEFAULT_DAY_INDEX : 0,
       startHour: 12, durationHours: 1, category: 'personal', source: 'manual', week: viewWeek,
     });
     select(ev.id);
@@ -54,6 +68,11 @@ function TimetableInner() {
         setSheetOpen(false);
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z') && !typing) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId && !typing) {
         const ev = events.find(x => x.id === selectedId);
         if (ev && ev.source === 'company') return; // company events are managed via subscriptions
@@ -64,7 +83,8 @@ function TimetableInner() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, events, removeEvent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, events, removeEvent, canUndo, undo]);
 
   // Career-investment stats for the week in view.
   const weekCareer = events.filter(e => (e.week ?? 0) === viewWeek && isCareerEvent(e));
@@ -99,6 +119,15 @@ function TimetableInner() {
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <span className="mr-1 hidden text-sm font-medium text-ink-soft md:inline">{formatWeekLabel(viewWeek)}</span>
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            title="Undo (Ctrl/⌘ + Z)"
+            aria-label="Undo last change"
+            className={cn(topBtn, 'w-9 px-0', !canUndo && 'cursor-not-allowed opacity-40')}
+          >
+            <Icons.Undo2 size={16} />
+          </button>
           <button onClick={() => goToWeek(w => w - 1)} className={cn(topBtn, 'w-9 px-0')} aria-label="Previous week">
             <Icons.ChevronLeft size={16} />
           </button>
@@ -172,6 +201,9 @@ function TimetableInner() {
           </div>
         </div>
       )}
+
+      {/* Conflict prompt (place anyway / next free slot / replace) */}
+      <ConflictDialog />
     </div>
   );
 }

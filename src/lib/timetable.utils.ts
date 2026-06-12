@@ -28,15 +28,15 @@ export const CATEGORY_LABEL: Record<EventCategory, string> = {
 
 // Raw color values for inline styles (needed for calendar grid blocks)
 export const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string; accent: string }> = {
-  uni:      { bg: '#B5D4F4', text: '#0C447C', accent: '#185FA5' },
-  company:  { bg: '#9FE1CB', text: '#085041', accent: '#0F6E56' },
-  mentor:   { bg: '#F3CDD6', text: '#6A2230', accent: '#7E3041' },
+  uni: { bg: '#B5D4F4', text: '#0C447C', accent: '#185FA5' },
+  company: { bg: '#9FE1CB', text: '#085041', accent: '#0F6E56' },
+  mentor: { bg: '#F3CDD6', text: '#6A2230', accent: '#7E3041' },
   personal: { bg: '#CECBF6', text: '#3C3489', accent: '#534AB7' },
-  gym:      { bg: '#FAC775', text: '#633806', accent: '#BA7517' },
-  meal:     { bg: '#FAC775', text: '#633806', accent: '#854F0B' },
-  social:   { bg: '#F4C0D1', text: '#72243E', accent: '#D4537E' },
-  grind:    { bg: '#CECBF6', text: '#26215C', accent: '#7F77DD' },
-  break:    { bg: '#D3D1C7', text: '#444441', accent: '#888780' },
+  gym: { bg: '#FAC775', text: '#633806', accent: '#BA7517' },
+  meal: { bg: '#FAC775', text: '#633806', accent: '#854F0B' },
+  social: { bg: '#F4C0D1', text: '#72243E', accent: '#D4537E' },
+  grind: { bg: '#CECBF6', text: '#26215C', accent: '#7F77DD' },
+  break: { bg: '#D3D1C7', text: '#444441', accent: '#888780' },
 };
 
 // Categories a user can manually assign (mentor/company are system-managed).
@@ -61,9 +61,35 @@ export function formatRange(startHour: number, durationHours: number): string {
 }
 
 // ---- Week / date model -----------------------------------------------------
-// The prototype "current" week is Mon Jun 9 2026; Thursday is treated as today.
-export const BASE_MONDAY = new Date(2026, 5, 9);
-export const TODAY_DAY_INDEX = 3; // Thursday
+// Single demo clock: everything (headers, labels, "today", countdowns) derives
+// from the real current date so the calendar is never out of sync.
+export const NOW = new Date();
+
+export function startOfDay(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+export const TODAY = startOfDay(NOW);
+
+/** Weekday as Mon=0 … Sun=6. */
+function weekdayIndex(d: Date): number {
+  return (d.getDay() + 6) % 7;
+}
+
+// Monday of the current real week.
+export const BASE_MONDAY = (() => {
+  const m = new Date(TODAY);
+  m.setDate(m.getDate() - weekdayIndex(TODAY));
+  return m;
+})();
+
+// Index of "today" within the Mon–Fri grid, or -1 on weekends (no column).
+export const TODAY_DAY_INDEX = weekdayIndex(TODAY) <= 4 ? weekdayIndex(TODAY) : -1;
+
+// A weekday to default new events onto (today, or Monday on weekends).
+export const DEFAULT_DAY_INDEX = TODAY_DAY_INDEX >= 0 ? TODAY_DAY_INDEX : 0;
 
 export function weekMonday(weekOffset: number): Date {
   const d = new Date(BASE_MONDAY);
@@ -98,19 +124,17 @@ export function isCareerEvent(ev: TimetableEvent): boolean {
 // ---- Milestones ------------------------------------------------------------
 export const MILESTONE_META: Record<MilestoneType, { label: string; icon: IconName; accent: string }> = {
   application: { label: 'Application', icon: 'Briefcase', accent: '#185FA5' },
-  interview:   { label: 'Interview',   icon: 'Megaphone', accent: '#7E3041' },
-  portfolio:   { label: 'Portfolio',   icon: 'PenTool',   accent: '#854F0B' },
-  deadline:    { label: 'Deadline',    icon: 'Flag',      accent: '#0F6E56' },
+  interview: { label: 'Interview', icon: 'Megaphone', accent: '#7E3041' },
+  portfolio: { label: 'Portfolio', icon: 'PenTool', accent: '#854F0B' },
+  deadline: { label: 'Deadline', icon: 'Flag', accent: '#0F6E56' },
 };
 
 export const MILESTONE_TYPES: MilestoneType[] = ['application', 'interview', 'portfolio', 'deadline'];
 
-/** Whole-day difference from the prototype "today" (Thu Jun 12 2026). */
+/** Whole-day difference from today (the real current date). */
 export function daysUntil(dateISO: string): number {
-  const today = cellDate(0, TODAY_DAY_INDEX);
-  today.setHours(0, 0, 0, 0);
   const target = new Date(`${dateISO}T00:00:00`);
-  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  return Math.round((startOfDay(target).getTime() - TODAY.getTime()) / 86_400_000);
 }
 
 export function formatCountdown(dateISO: string): string {
@@ -127,6 +151,65 @@ export function toISODate(d: Date): string {
 
 export function sameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// ---- Conflict detection ----------------------------------------------------
+export interface Slot {
+  day: number;
+  startHour: number;
+  durationHours: number;
+  week: number;
+}
+
+/** Do two same-day time ranges overlap? */
+function rangesOverlap(aStart: number, aDur: number, bStart: number, bDur: number): boolean {
+  return aStart < bStart + bDur && bStart < aStart + aDur;
+}
+
+/** True when an event occupies the given week (recurring blocks span all weeks). */
+function eventInWeek(ev: TimetableEvent, week: number): boolean {
+  return Boolean(ev.recurring) || (ev.week ?? 0) === week;
+}
+
+/** Events that overlap the proposed slot (same day + week, ignoring `ignoreId`). */
+export function findConflicts(
+  events: TimetableEvent[],
+  slot: Slot,
+  ignoreId?: string,
+): TimetableEvent[] {
+  return events.filter(e =>
+    e.id !== ignoreId &&
+    e.day === slot.day &&
+    eventInWeek(e, slot.week) &&
+    rangesOverlap(slot.startHour, slot.durationHours, e.startHour, e.durationHours),
+  );
+}
+
+/**
+ * Next conflict-free slot at/after `from`, scanning later hours then later days
+ * and wrapping back to Monday. Returns null when the week is fully booked.
+ */
+export function findNextFreeSlot(
+  events: TimetableEvent[],
+  from: Slot,
+  ignoreId?: string,
+): { day: number; startHour: number } | null {
+  const lastStart = HOURS[HOURS.length - 1] + 1 - from.durationHours;
+  const free = (day: number, startHour: number) =>
+    findConflicts(events, { day, startHour, durationHours: from.durationHours, week: from.week }, ignoreId).length === 0;
+
+  for (let day = from.day; day <= 4; day++) {
+    const startH = day === from.day ? from.startHour : HOURS[0];
+    for (let h = startH; h <= lastStart; h++) {
+      if (free(day, h)) return { day, startHour: h };
+    }
+  }
+  for (let day = 0; day < from.day; day++) {
+    for (let h = HOURS[0]; h <= lastStart; h++) {
+      if (free(day, h)) return { day, startHour: h };
+    }
+  }
+  return null;
 }
 
 // ---- AI placement ----------------------------------------------------------
