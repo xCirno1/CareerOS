@@ -34,6 +34,27 @@ export type CareerProfilePatch = Partial<
   targetNodeId?: string;
 };
 
+/**
+ * A mentor session the user has booked. Lives in the global store (not the
+ * timetable provider) so the Mentors screen can create one and the Timetable
+ * screen can render it — the two features stay in sync.
+ */
+export interface MentorSession {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  initials: string;
+  colorClass: string;
+  role: string;
+  company: string;
+  /** Human slot string, e.g. "Friday, 2:30 PM". */
+  slot: string;
+  topic?: string;
+  /** Career node this mentor maps to — links the session back to the map. */
+  nodeId?: string;
+  bookedAt: string;
+}
+
 interface AppStore {
   saved: string[];
   isSaved: (id: string) => boolean;
@@ -44,12 +65,27 @@ interface AppStore {
   updateCareerProfile: (patch: CareerProfilePatch) => CareerProfile;
   target: string;
   setTarget: (id: string) => void;
+  mentorSessions: MentorSession[];
+  /** Books (or re-books) a session — one per mentor; returns the saved session. */
+  bookMentorSession: (session: Omit<MentorSession, 'id' | 'bookedAt'>) => MentorSession;
+  cancelMentorSession: (id: string) => void;
 }
 
 const Ctx = createContext<AppStore | null>(null);
 const SAVED_KEY = 'careeros-saved';
 const TARGET_KEY = 'careeros-target';
 const CAREER_PROFILE_KEY = 'careeros-career-profile';
+const MENTOR_SESSIONS_KEY = 'careeros-mentor-sessions';
+
+function loadMentorSessions(): MentorSession[] {
+  try {
+    const raw = localStorage.getItem(MENTOR_SESSIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 const DEFAULT_CAREER_PROFILE: CareerProfile = {
   name: 'Avery Quinn',
@@ -144,10 +180,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [target, setTargetState] = useState<string>(
     () => localStorage.getItem(TARGET_KEY) || loadCareerProfile().targetNodeId || TARGET_NODE_ID,
   );
+  const [mentorSessions, setMentorSessions] = useState<MentorSession[]>(loadMentorSessions);
 
   useEffect(() => {
     localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
   }, [saved]);
+
+  useEffect(() => {
+    localStorage.setItem(MENTOR_SESSIONS_KEY, JSON.stringify(mentorSessions));
+  }, [mentorSessions]);
 
   useEffect(() => {
     localStorage.setItem(CAREER_PROFILE_KEY, JSON.stringify(careerProfile));
@@ -192,6 +233,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setCareerProfile((prev) => ({ ...prev, targetNodeId: id, updatedAt: new Date().toISOString() }));
   }, []);
 
+  const bookMentorSession = useCallback((session: Omit<MentorSession, 'id' | 'bookedAt'>) => {
+    const created: MentorSession = {
+      ...session,
+      id: `ms-${session.mentorId}-${Date.now()}`,
+      bookedAt: new Date().toISOString(),
+    };
+    // One active session per mentor — replace any existing one.
+    setMentorSessions((prev) => [...prev.filter((s) => s.mentorId !== session.mentorId), created]);
+    return created;
+  }, []);
+
+  const cancelMentorSession = useCallback((id: string) => {
+    setMentorSessions((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
   return (
     <Ctx.Provider
       value={{
@@ -204,6 +260,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         updateCareerProfile,
         target,
         setTarget,
+        mentorSessions,
+        bookMentorSession,
+        cancelMentorSession,
       }}
     >
       {children}

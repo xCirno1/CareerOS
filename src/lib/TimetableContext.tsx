@@ -1,11 +1,43 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type {
   TimetableEvent,
   CompanyChannel,
-  LifestyleGoal,
   ConnectedCalendar,
   AISuggestion,
+  FocusSkill,
+  Milestone,
 } from './timetable.types';
+import { CATEGORY_ICON, FREE_SLOTS, isCareerEvent, parseSlot, cellDate, TODAY_DAY_INDEX, toISODate } from './timetable.utils';
+import { useAppStore } from './appStore';
+import { getNode, NODES, TARGET_NODE_ID, type CareerNode } from './mockData';
+
+// Builds career prep-block suggestions for the enabled target-role skills,
+// slotting each into a known-free window. Replaces the old lifestyle optimiser.
+function buildCareerSuggestions(target: CareerNode, skills: FocusSkill[]): AISuggestion[] {
+  return skills
+    .filter(s => s.enabled)
+    .slice(0, FREE_SLOTS.length)
+    .map((s, i) => {
+      const slot = FREE_SLOTS[i % FREE_SLOTS.length];
+      return {
+        id: `cs${i + 1}`,
+        type: 'grind' as const,
+        title: `Build: ${s.label}`,
+        reason: `Block focused time to build evidence in ${s.label} for ${target.title}.`,
+        day: slot.day,
+        startHour: slot.startHour,
+        durationHours: 2,
+        icon: CATEGORY_ICON.grind,
+        applied: false,
+        nodeId: target.id,
+        skill: s.label,
+      };
+    });
+}
+
+const EVENTS_KEY = 'careeros-timetable-events';
+const MILESTONES_KEY = 'careeros-timetable-milestones';
+const COMPLETED_KEY = 'careeros-timetable-completed';
 
 const INITIAL_EVENTS: TimetableEvent[] = [
   { id: 'e1', title: 'COMM 201', subtitle: 'Lecture • Arts Building', day: 0, startHour: 9, durationHours: 2, category: 'uni', source: 'upload' },
@@ -16,39 +48,58 @@ const INITIAL_EVENTS: TimetableEvent[] = [
   { id: 'e6', title: 'PSYC 102', subtitle: 'Lecture • Wallace Hall', day: 4, startHour: 10, durationHours: 2, category: 'uni', source: 'upload' },
 ];
 
+function loadList<T>(key: string, fallback: T[]): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function addDays(base: Date, n: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function seedMilestones(targetId: string): Milestone[] {
+  const today = cellDate(0, TODAY_DAY_INDEX);
+  return [
+    { id: 'mi1', title: 'Resume final draft', type: 'deadline', date: toISODate(addDays(today, 4)), nodeId: targetId },
+    { id: 'mi2', title: 'Mock interview prep', type: 'interview', date: toISODate(addDays(today, 6)), nodeId: targetId },
+    { id: 'mi3', title: 'Google grad applications close', type: 'application', date: toISODate(addDays(today, 9)) },
+    { id: 'mi4', title: 'Portfolio review', type: 'portfolio', date: toISODate(addDays(today, 15)), nodeId: targetId },
+  ];
+}
+
 const INITIAL_COMPANIES: CompanyChannel[] = [
   {
-    id: 'atlassian', name: 'Atlassian', tag: 'Tech • Grad programs', initials: 'AT', colorClass: 'ca-coral', subscribed: true,
+    id: 'atlassian', name: 'Atlassian', tag: 'Tech • Grad programs', initials: 'AT', colorClass: 'ca-coral', inLibrary: true, enabled: true,
     events: [{ title: 'Atlassian info session', subtitle: 'Events channel', day: 0, startHour: 13, durationHours: 1, category: 'company' }],
   },
   {
-    id: 'canva', name: 'Canva', tag: 'Design • Internships', initials: 'CV', colorClass: 'ca-teal', subscribed: true,
+    id: 'canva', name: 'Canva', tag: 'Design • Internships', initials: 'CV', colorClass: 'ca-teal', inLibrary: true, enabled: true,
     events: [{ title: 'Canva grad careers', subtitle: 'Events channel', day: 2, startHour: 12, durationHours: 1, category: 'company' }],
   },
   {
-    id: 'google', name: 'Google', tag: 'Tech • Campus events', initials: 'GG', colorClass: 'ca-blue', subscribed: true,
+    id: 'google', name: 'Google', tag: 'Tech • Campus events', initials: 'GG', colorClass: 'ca-blue', inLibrary: true, enabled: true,
     events: [{ title: 'Google developer day', subtitle: 'Events channel', day: 3, startHour: 11, durationHours: 2, category: 'company' }],
   },
   {
-    id: 'deloitte', name: 'Deloitte', tag: 'Consulting • Networking', initials: 'DL', colorClass: 'ca-amber', subscribed: false,
+    id: 'deloitte', name: 'Deloitte', tag: 'Consulting • Networking', initials: 'DL', colorClass: 'ca-amber', inLibrary: false, enabled: true,
     events: [{ title: 'Deloitte careers night', subtitle: 'Events channel', day: 4, startHour: 17, durationHours: 2, category: 'company' }],
   },
   {
-    id: 'afterpay', name: 'Afterpay', tag: 'Fintech • Workshops', initials: 'AP', colorClass: 'ca-pink', subscribed: false,
+    id: 'afterpay', name: 'Afterpay', tag: 'Fintech • Workshops', initials: 'AP', colorClass: 'ca-pink', inLibrary: false, enabled: true,
     events: [{ title: 'Fintech workshop', subtitle: 'Events channel', day: 1, startHour: 16, durationHours: 1, category: 'company' }],
   },
   {
-    id: 'bhp', name: 'BHP', tag: 'Mining • Grad fair', initials: 'BH', colorClass: 'ca-teal', subscribed: false,
+    id: 'bhp', name: 'BHP', tag: 'Mining • Grad fair', initials: 'BH', colorClass: 'ca-teal', inLibrary: false, enabled: true,
     events: [{ title: 'BHP grad fair', subtitle: 'Events channel', day: 2, startHour: 14, durationHours: 2, category: 'company' }],
   },
-];
-
-const INITIAL_GOALS: LifestyleGoal[] = [
-  { id: 'gym', label: 'Gym & fitness', icon: 'ti-barbell', enabled: true, detail: 'Schedule 3–4 gym sessions per week on low-class days' },
-  { id: 'meal', label: 'Meal prep', icon: 'ti-soup', enabled: true, detail: 'Block Sunday afternoons for bulk cooking' },
-  { id: 'social', label: 'Socialise', icon: 'ti-confetti', enabled: false, detail: 'Protect Friday evenings for social time' },
-  { id: 'grind', label: 'Deep work', icon: 'ti-brain', enabled: true, detail: 'Reserve morning focus blocks for assignments' },
-  { id: 'break', label: 'Recovery', icon: 'ti-zzz', enabled: false, detail: 'Add short breaks between back-to-back classes' },
 ];
 
 const INITIAL_CALENDARS: ConnectedCalendar[] = [
@@ -60,64 +111,147 @@ const INITIAL_CALENDARS: ConnectedCalendar[] = [
 interface TimetableCtx {
   events: TimetableEvent[];
   companies: CompanyChannel[];
-  goals: LifestyleGoal[];
   calendars: ConnectedCalendar[];
   aiSuggestions: AISuggestion[];
   aiLoading: boolean;
   aiSummary: string;
+  // Career goal
+  targetNode: CareerNode;
+  targetReadiness: number;
+  focusSkills: FocusSkill[];
+  toggleFocusSkill: (id: string) => void;
+  // Milestones
+  milestones: Milestone[];
+  addMilestone: (m: Omit<Milestone, 'id'>) => void;
+  removeMilestone: (id: string) => void;
+  // Completion
+  isComplete: (id: string) => boolean;
+  toggleComplete: (id: string) => void;
+  // Actions
   toggleCompany: (id: string) => void;
-  toggleGoal: (id: string) => void;
+  addToLibrary: (id: string) => void;
+  removeFromLibrary: (id: string) => void;
   applySuggestion: (id: string) => void;
   dismissSuggestion: (id: string) => void;
   runAIOptimization: () => Promise<void>;
   connectCalendar: (id: string) => void;
-  addEvent: (event: Omit<TimetableEvent, 'id'>) => void;
+  addEvent: (event: Omit<TimetableEvent, 'id'>) => TimetableEvent;
+  updateEvent: (id: string, patch: Partial<Omit<TimetableEvent, 'id'>>) => void;
+  removeEvent: (id: string) => void;
 }
 
 const Ctx = createContext<TimetableCtx | null>(null);
 
 export function TimetableProvider({ children }: { children: ReactNode }) {
-  const [events, setEvents] = useState<TimetableEvent[]>(INITIAL_EVENTS);
+  const { mentorSessions, cancelMentorSession, target } = useAppStore();
+  const targetNode = getNode(target) ?? getNode(TARGET_NODE_ID) ?? NODES[0];
+
+  const [stored, setStored] = useState<TimetableEvent[]>(() => loadList(EVENTS_KEY, INITIAL_EVENTS));
   const [companies, setCompanies] = useState<CompanyChannel[]>(INITIAL_COMPANIES);
-  const [goals, setGoals] = useState<LifestyleGoal[]>(INITIAL_GOALS);
   const [calendars, setCalendars] = useState<ConnectedCalendar[]>(INITIAL_CALENDARS);
+  const [milestones, setMilestones] = useState<Milestone[]>(() => loadList(MILESTONES_KEY, seedMilestones(targetNode.id)));
+  const [completedIds, setCompletedIds] = useState<string[]>(() => loadList(COMPLETED_KEY, []));
+  const [disabledSkills, setDisabledSkills] = useState<string[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
 
-  const toggleCompany = useCallback((id: string) => {
-    setCompanies(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const nowSubscribed = !c.subscribed;
-      setEvents(evs => {
-        const filtered = evs.filter(e => e.companyId !== id);
-        if (nowSubscribed) {
-          const newEvs = c.events.map((ev, i) => ({
-            ...ev, id: `${id}-${i}`, companyId: id, source: 'company' as const,
-          }));
-          return [...filtered, ...newEvs];
-        }
-        return filtered;
-      });
-      return { ...c, subscribed: nowSubscribed };
-    }));
+  useEffect(() => { localStorage.setItem(EVENTS_KEY, JSON.stringify(stored)); }, [stored]);
+  useEffect(() => { localStorage.setItem(MILESTONES_KEY, JSON.stringify(milestones)); }, [milestones]);
+  useEffect(() => { localStorage.setItem(COMPLETED_KEY, JSON.stringify(completedIds)); }, [completedIds]);
+
+  // Skills to build toward the target role (derived from the node's top skills).
+  const focusSkills = useMemo<FocusSkill[]>(
+    () => targetNode.topSkills.map(label => ({ id: label, label, gap: true, enabled: !disabledSkills.includes(label) })),
+    [targetNode, disabledSkills],
+  );
+
+  const toggleFocusSkill = useCallback((id: string) => {
+    setDisabledSkills(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }, []);
 
-  const toggleGoal = useCallback((id: string) => {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, enabled: !g.enabled } : g));
+  // Library events show when the channel is saved AND toggled on (current week).
+  const companyEvents = useMemo<TimetableEvent[]>(() =>
+    companies.flatMap(c =>
+      c.inLibrary && c.enabled
+        ? c.events.map((ev, i) => ({
+            ...ev, id: `company-${c.id}-${i}`, companyId: c.id,
+            source: 'company' as const, week: 0, locked: true,
+          }))
+        : [],
+    ),
+  [companies]);
+
+  // Mentor sessions booked on the Mentors screen surface here automatically.
+  const mentorEvents = useMemo<TimetableEvent[]>(() =>
+    mentorSessions.map(s => {
+      const pos = parseSlot(s.slot) ?? { day: 4, startHour: 15 };
+      const firstName = s.mentorName.split(' ')[0];
+      return {
+        id: `mentor-${s.id}`,
+        title: `Mentor: ${firstName}`,
+        subtitle: `${s.role} · ${s.company}`,
+        day: pos.day,
+        startHour: pos.startHour,
+        durationHours: 1,
+        category: 'mentor' as const,
+        source: 'mentor' as const,
+        week: 0,
+        mentorSessionId: s.id,
+        nodeId: s.nodeId,
+        locked: true,
+      };
+    }),
+  [mentorSessions]);
+
+  const events = useMemo<TimetableEvent[]>(
+    () => [...stored, ...companyEvents, ...mentorEvents],
+    [stored, companyEvents, mentorEvents],
+  );
+
+  // Readiness = node fit + a bump for completed career-building blocks.
+  const targetReadiness = useMemo(() => {
+    const completedCareer = events.filter(e => completedIds.includes(e.id) && isCareerEvent(e)).length;
+    return Math.min(100, Math.round(targetNode.match + completedCareer * 2));
+  }, [events, completedIds, targetNode]);
+
+  const isComplete = useCallback((id: string) => completedIds.includes(id), [completedIds]);
+  const toggleComplete = useCallback((id: string) => {
+    setCompletedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  const addMilestone = useCallback((m: Omit<Milestone, 'id'>) => {
+    setMilestones(prev => [...prev, { ...m, id: `mi-${Date.now()}` }].sort((a, b) => a.date.localeCompare(b.date)));
+  }, []);
+  const removeMilestone = useCallback((id: string) => {
+    setMilestones(prev => prev.filter(m => m.id !== id));
+  }, []);
+
+  const toggleCompany = useCallback((id: string) => {
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, enabled: !c.enabled } : c));
+  }, []);
+
+  const addToLibrary = useCallback((id: string) => {
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, inLibrary: true, enabled: true } : c));
+  }, []);
+
+  const removeFromLibrary = useCallback((id: string) => {
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, inLibrary: false } : c));
   }, []);
 
   const applySuggestion = useCallback((id: string) => {
     setAiSuggestions(prev => prev.map(s => {
-      if (s.id !== id) return s;
-      setEvents(evs => [...evs, {
-        id: `ai-${id}`, title: s.title, day: s.day,
-        startHour: s.startHour, durationHours: s.durationHours,
-        category: s.type, source: 'ai',
+      if (s.id !== id || s.applied) return s;
+      setStored(evs => [...evs, {
+        id: `ai-${id}-${Date.now()}`,
+        title: s.title,
+        subtitle: s.skill ? `Toward ${targetNode.title}` : undefined,
+        day: s.day, startHour: s.startHour, durationHours: s.durationHours,
+        category: s.type, source: 'ai', week: 0, nodeId: s.nodeId,
       }]);
       return { ...s, applied: true };
     }));
-  }, []);
+  }, [targetNode]);
 
   const dismissSuggestion = useCallback((id: string) => {
     setAiSuggestions(prev => prev.filter(s => s.id !== id));
@@ -128,79 +262,51 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addEvent = useCallback((event: Omit<TimetableEvent, 'id'>) => {
-    setEvents(prev => [...prev, { ...event, id: `manual-${Date.now()}` }]);
+    const created: TimetableEvent = { week: 0, ...event, id: `manual-${Date.now()}` };
+    setStored(prev => [...prev, created]);
+    return created;
   }, []);
+
+  const updateEvent = useCallback((id: string, patch: Partial<Omit<TimetableEvent, 'id'>>) => {
+    setStored(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  }, []);
+
+  const removeEvent = useCallback((id: string) => {
+    if (id.startsWith('mentor-')) {
+      cancelMentorSession(id.slice('mentor-'.length));
+      return;
+    }
+    setStored(prev => prev.filter(e => e.id !== id));
+  }, [cancelMentorSession]);
 
   const runAIOptimization = useCallback(async () => {
     setAiLoading(true);
     setAiSuggestions([]);
     setAiSummary('');
 
-    const enabledGoals = goals.filter(g => g.enabled).map(g => g.label).join(', ');
-    const busyDays = ['Monday', 'Wednesday', 'Thursday'];
-    const lightDays = ['Tuesday', 'Friday'];
+    const suggestions = buildCareerSuggestions(targetNode, focusSkills);
+    await new Promise(res => setTimeout(res, 700)); // simulated "thinking"
 
-    const prompt = `You are a student lifestyle optimizer. A student has the following university schedule this week:
-- Monday: COMM 201 (9-11am), Atlassian info session (1-2pm)
-- Tuesday: ECON 110 (10-11am), Study group (2-4pm)  
-- Wednesday: CS 301 (8-10am), Canva careers (12-1pm)
-- Thursday: MKTG 220 (9-10am), Google dev day (11am-1pm)
-- Friday: PSYC 102 (10am-12pm)
-
-Their lifestyle goals: ${enabledGoals}
-Busy days: ${busyDays.join(', ')}
-Lighter days: ${lightDays.join(', ')}
-
-Return ONLY valid JSON with this exact shape (no markdown, no explanation):
-{
-  "summary": "2-3 sentence overview of the optimized week",
-  "suggestions": [
-    {
-      "id": "s1",
-      "type": "gym",
-      "title": "Morning gym session",
-      "reason": "Tuesday is light — hit the gym before your 10am class to start fresh",
-      "day": 1,
-      "startHour": 7,
-      "durationHours": 1,
-      "icon": "ti-barbell"
+    if (suggestions.length === 0) {
+      setAiSummary(`Pick at least one skill to build toward ${targetNode.title}, then optimise to slot prep into your free time.`);
+    } else {
+      setAiSummary(
+        `A plan to move toward ${targetNode.title}. I slotted ${suggestions.length} prep block${suggestions.length > 1 ? 's' : ''} ` +
+        `into your free windows — add the ones you'll commit to, and consider booking a mentor for the trickier skills.`,
+      );
+      setAiSuggestions(suggestions);
     }
-  ]
-}
-
-Types allowed: gym, meal, social, grind, break
-Days: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
-startHour is 24h integer (7=7am, 13=1pm)
-Generate 4-6 suggestions based on the enabled goals. Be specific and friendly in reasons.`;
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      const text = data.content?.find((b: { type: string }) => b.type === 'text')?.text ?? '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      setAiSuggestions((parsed.suggestions ?? []).map((s: AISuggestion) => ({ ...s, applied: false })));
-      setAiSummary(parsed.summary ?? '');
-    } catch (err) {
-      setAiSummary('Could not generate suggestions right now. Please try again.');
-    } finally {
-      setAiLoading(false);
-    }
-  }, [goals]);
+    setAiLoading(false);
+  }, [targetNode, focusSkills]);
 
   return (
     <Ctx.Provider value={{
-      events, companies, goals, calendars, aiSuggestions, aiLoading, aiSummary,
-      toggleCompany, toggleGoal, applySuggestion, dismissSuggestion,
-      runAIOptimization, connectCalendar, addEvent,
+      events, companies, calendars, aiSuggestions, aiLoading, aiSummary,
+      targetNode, targetReadiness, focusSkills, toggleFocusSkill,
+      milestones, addMilestone, removeMilestone,
+      isComplete, toggleComplete,
+      toggleCompany, addToLibrary, removeFromLibrary, applySuggestion, dismissSuggestion,
+      runAIOptimization, connectCalendar, addEvent, updateEvent, removeEvent,
     }}>
       {children}
     </Ctx.Provider>

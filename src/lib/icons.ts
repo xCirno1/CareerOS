@@ -102,6 +102,16 @@ import {
   AtSign,
   Phone,
   Building,
+  Dumbbell,
+  UtensilsCrossed,
+  PartyPopper,
+  Coffee,
+  Loader2,
+  FileUp,
+  Trash2,
+  CalendarPlus,
+  Circle,
+  Repeat,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -203,6 +213,16 @@ export const Icons = {
   AtSign,
   Phone,
   Building,
+  Dumbbell,
+  UtensilsCrossed,
+  PartyPopper,
+  Coffee,
+  Loader2,
+  FileUp,
+  Trash2,
+  CalendarPlus,
+  Circle,
+  Repeat,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icons;

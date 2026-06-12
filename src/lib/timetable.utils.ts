@@ -1,76 +1,36 @@
-import type { EventCategory } from '@/lib/timetable.types';
+import type { EventCategory, MilestoneType, TimetableEvent } from '@/lib/timetable.types';
+import type { IconName } from '@/lib/icons';
 
-export interface CategoryStyle {
-  bg: string;
-  text: string;
-  border: string;
-  label: string;
-  icon: string;
-}
+// Lucide icon name (resolvable via getIcon) for each category.
+export const CATEGORY_ICON: Record<EventCategory, IconName> = {
+  uni: 'GraduationCap',
+  company: 'Building2',
+  mentor: 'Users',
+  personal: 'User',
+  gym: 'Dumbbell',
+  meal: 'UtensilsCrossed',
+  social: 'PartyPopper',
+  grind: 'Brain',
+  break: 'Coffee',
+};
 
-export const CATEGORY_STYLES: Record<EventCategory, CategoryStyle> = {
-  uni: {
-    bg: 'bg-blue-50',
-    text: 'text-blue-800',
-    border: 'border-blue-400',
-    label: 'University',
-    icon: 'ti-school',
-  },
-  company: {
-    bg: 'bg-teal-50',
-    text: 'text-teal-800',
-    border: 'border-teal-400',
-    label: 'Company event',
-    icon: 'ti-building',
-  },
-  personal: {
-    bg: 'bg-purple-50',
-    text: 'text-purple-800',
-    border: 'border-purple-400',
-    label: 'Personal',
-    icon: 'ti-user',
-  },
-  gym: {
-    bg: 'bg-orange-50',
-    text: 'text-orange-800',
-    border: 'border-orange-400',
-    label: 'Gym',
-    icon: 'ti-barbell',
-  },
-  meal: {
-    bg: 'bg-amber-50',
-    text: 'text-amber-800',
-    border: 'border-amber-400',
-    label: 'Meal prep',
-    icon: 'ti-soup',
-  },
-  social: {
-    bg: 'bg-pink-50',
-    text: 'text-pink-800',
-    border: 'border-pink-400',
-    label: 'Social',
-    icon: 'ti-confetti',
-  },
-  grind: {
-    bg: 'bg-indigo-50',
-    text: 'text-indigo-800',
-    border: 'border-indigo-400',
-    label: 'Deep work',
-    icon: 'ti-brain',
-  },
-  break: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-600',
-    border: 'border-gray-300',
-    label: 'Break',
-    icon: 'ti-zzz',
-  },
+export const CATEGORY_LABEL: Record<EventCategory, string> = {
+  uni: 'University',
+  company: 'Company event',
+  mentor: 'Mentor session',
+  personal: 'Personal',
+  gym: 'Gym',
+  meal: 'Meal prep',
+  social: 'Social',
+  grind: 'Deep work',
+  break: 'Break',
 };
 
 // Raw color values for inline styles (needed for calendar grid blocks)
 export const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string; accent: string }> = {
   uni:      { bg: '#B5D4F4', text: '#0C447C', accent: '#185FA5' },
   company:  { bg: '#9FE1CB', text: '#085041', accent: '#0F6E56' },
+  mentor:   { bg: '#F3CDD6', text: '#6A2230', accent: '#7E3041' },
   personal: { bg: '#CECBF6', text: '#3C3489', accent: '#534AB7' },
   gym:      { bg: '#FAC775', text: '#633806', accent: '#BA7517' },
   meal:     { bg: '#FAC775', text: '#633806', accent: '#854F0B' },
@@ -79,12 +39,125 @@ export const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string; 
   break:    { bg: '#D3D1C7', text: '#444441', accent: '#888780' },
 };
 
-export const HOURS = Array.from({ length: 13 }, (_, i) => i + 7); // 7am–7pm
+// Categories a user can manually assign (mentor/company are system-managed).
+export const ALL_CATEGORIES: EventCategory[] = [
+  'uni', 'personal', 'grind', 'gym', 'meal', 'social', 'break', 'company',
+];
+
+export const HOURS = Array.from({ length: 24 }, (_, i) => i); // full 24h day
+export const FOCUS_HOUR = 7; // grid scrolls here on open (the daytime "focus")
 export const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 export const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 export const SLOT_HEIGHT = 48; // px per hour
 
 export function formatHour(h: number): string {
+  if (h === 0 || h === 24) return '12 AM';
   if (h === 12) return '12 PM';
   return h < 12 ? `${h} AM` : `${h - 12} PM`;
+}
+
+export function formatRange(startHour: number, durationHours: number): string {
+  return `${formatHour(startHour)} – ${formatHour(startHour + durationHours)}`;
+}
+
+// ---- Week / date model -----------------------------------------------------
+// The prototype "current" week is Mon Jun 9 2026; Thursday is treated as today.
+export const BASE_MONDAY = new Date(2026, 5, 9);
+export const TODAY_DAY_INDEX = 3; // Thursday
+
+export function weekMonday(weekOffset: number): Date {
+  const d = new Date(BASE_MONDAY);
+  d.setDate(d.getDate() + weekOffset * 7);
+  return d;
+}
+
+export function cellDate(weekOffset: number, dayIndex: number): Date {
+  const d = weekMonday(weekOffset);
+  d.setDate(d.getDate() + dayIndex);
+  return d;
+}
+
+export function formatWeekLabel(weekOffset: number): string {
+  const mon = weekMonday(weekOffset);
+  const fri = cellDate(weekOffset, 4);
+  const monthFmt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const sameMonth = mon.getMonth() === fri.getMonth();
+  return sameMonth
+    ? `${mon.toLocaleDateString('en-US', monthFmt)} – ${fri.getDate()}`
+    : `${mon.toLocaleDateString('en-US', monthFmt)} – ${fri.toLocaleDateString('en-US', monthFmt)}`;
+}
+
+// ---- Career classification -------------------------------------------------
+// Time that actively moves the user toward their target role (vs fixed/life).
+const CAREER_CATEGORIES = new Set<EventCategory>(['mentor', 'grind', 'company']);
+
+export function isCareerEvent(ev: TimetableEvent): boolean {
+  return CAREER_CATEGORIES.has(ev.category) || Boolean(ev.nodeId);
+}
+
+// ---- Milestones ------------------------------------------------------------
+export const MILESTONE_META: Record<MilestoneType, { label: string; icon: IconName; accent: string }> = {
+  application: { label: 'Application', icon: 'Briefcase', accent: '#185FA5' },
+  interview:   { label: 'Interview',   icon: 'Megaphone', accent: '#7E3041' },
+  portfolio:   { label: 'Portfolio',   icon: 'PenTool',   accent: '#854F0B' },
+  deadline:    { label: 'Deadline',    icon: 'Flag',      accent: '#0F6E56' },
+};
+
+export const MILESTONE_TYPES: MilestoneType[] = ['application', 'interview', 'portfolio', 'deadline'];
+
+/** Whole-day difference from the prototype "today" (Thu Jun 12 2026). */
+export function daysUntil(dateISO: string): number {
+  const today = cellDate(0, TODAY_DAY_INDEX);
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(`${dateISO}T00:00:00`);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+export function formatCountdown(dateISO: string): string {
+  const d = daysUntil(dateISO);
+  if (d < 0) return `${Math.abs(d)}d ago`;
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  return `in ${d} days`;
+}
+
+export function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// ---- AI placement ----------------------------------------------------------
+// Free 2-hour windows around the known class schedule, used to slot prep blocks.
+export const FREE_SLOTS: { day: number; startHour: number }[] = [
+  { day: 1, startHour: 7 },  // Tue morning
+  { day: 4, startHour: 13 }, // Fri early afternoon
+  { day: 2, startHour: 14 }, // Wed afternoon
+  { day: 3, startHour: 14 }, // Thu afternoon
+  { day: 0, startHour: 7 },  // Mon morning
+  { day: 1, startHour: 16 }, // Tue late afternoon
+  { day: 4, startHour: 7 },  // Fri morning
+  { day: 3, startHour: 16 }, // Thu late afternoon
+];
+
+// Mon–Fri map; weekend slots fall back onto Friday so they still render.
+const WEEKDAY_INDEX: Record<string, number> = {
+  mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 4, sun: 0,
+};
+
+/**
+ * Parses a human slot string like "Friday, 2:30 PM" into a grid position.
+ * Weekend slots are clamped onto Friday; out-of-range hours clamp into 7am–6pm.
+ */
+export function parseSlot(slot: string): { day: number; startHour: number } | null {
+  const m = slot.match(/([a-z]{3})[a-z]*,?\s+(\d{1,2})(?::\d{2})?\s*(am|pm)/i);
+  if (!m) return null;
+  const day = WEEKDAY_INDEX[m[1].toLowerCase()];
+  if (day === undefined) return null;
+  let hour = parseInt(m[2], 10) % 12;
+  if (/pm/i.test(m[3])) hour += 12;
+  hour = Math.min(HOURS[HOURS.length - 1] - 1, Math.max(HOURS[0], hour));
+  return { day, startHour: hour };
 }
