@@ -89,9 +89,11 @@ const FONT_IDS = FONT_SIZES.map((f) => f.id);
 const THEME_KEY = 'careeros-color-theme';
 const BG_KEY = 'careeros-bg-theme';
 const FONT_KEY = 'careeros-font-size';
+const AUTO_OPEN_CHAT_KEY = 'careeros-auto-open-chat';
 const DEFAULT_THEME: ColorTheme = 'teal';
 const DEFAULT_BG: BgTheme = 'mint';
 const DEFAULT_FONT: FontSize = 16;
+const DEFAULT_AUTO_OPEN_CHAT = false;
 
 function loadTheme(): ColorTheme {
   if (typeof window === 'undefined') return DEFAULT_THEME;
@@ -115,6 +117,11 @@ function loadFont(): FontSize {
   return FONT_IDS.includes(parsed as FontSize) ? (parsed as FontSize) : DEFAULT_FONT;
 }
 
+function loadAutoOpenChat(): boolean {
+  if (typeof window === 'undefined') return DEFAULT_AUTO_OPEN_CHAT;
+  return window.localStorage.getItem(AUTO_OPEN_CHAT_KEY) === 'true';
+}
+
 interface AppearanceStore {
   colorTheme: ColorTheme;
   setColorTheme: (theme: ColorTheme) => void;
@@ -122,6 +129,9 @@ interface AppearanceStore {
   setBgTheme: (bg: BgTheme) => void;
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
+  /** Auto-open the mentor chat window when visiting the Mentors page. */
+  autoOpenChat: boolean;
+  setAutoOpenChat: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -131,6 +141,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(loadTheme);
   const [bgTheme, setBgThemeState] = useState<BgTheme>(loadBg);
   const [fontSize, setFontSizeState] = useState<FontSize>(loadFont);
+  const [autoOpenChat, setAutoOpenChatState] = useState<boolean>(loadAutoOpenChat);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorTheme);
@@ -147,18 +158,24 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(FONT_KEY, String(fontSize));
   }, [fontSize]);
 
+  useEffect(() => {
+    window.localStorage.setItem(AUTO_OPEN_CHAT_KEY, String(autoOpenChat));
+  }, [autoOpenChat]);
+
   const setColorTheme = useCallback((theme: ColorTheme) => setColorThemeState(theme), []);
   const setBgTheme = useCallback((bg: BgTheme) => setBgThemeState(bg), []);
   const setFontSize = useCallback((size: FontSize) => setFontSizeState(size), []);
+  const setAutoOpenChat = useCallback((value: boolean) => setAutoOpenChatState(value), []);
   const reset = useCallback(() => {
     setColorThemeState(DEFAULT_THEME);
     setBgThemeState(DEFAULT_BG);
     setFontSizeState(DEFAULT_FONT);
+    setAutoOpenChatState(DEFAULT_AUTO_OPEN_CHAT);
   }, []);
 
   const value = useMemo<AppearanceStore>(
-    () => ({ colorTheme, setColorTheme, bgTheme, setBgTheme, fontSize, setFontSize, reset }),
-    [colorTheme, setColorTheme, bgTheme, setBgTheme, fontSize, setFontSize, reset],
+    () => ({ colorTheme, setColorTheme, bgTheme, setBgTheme, fontSize, setFontSize, autoOpenChat, setAutoOpenChat, reset }),
+    [colorTheme, setColorTheme, bgTheme, setBgTheme, fontSize, setFontSize, autoOpenChat, setAutoOpenChat, reset],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

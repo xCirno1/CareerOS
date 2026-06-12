@@ -11,7 +11,7 @@ import {
   type BgTheme,
   type FontSize,
 } from '@/lib/appearance';
-import { Button, Card, Badge, Avatar } from '@/ui/components';
+import { Button, Card, Badge, Avatar, Toggle } from '@/ui/components';
 import { PlanBadge } from '@/components/PlanBadge';
 
 /* ------------------------------------------------------------------ */
@@ -330,8 +330,17 @@ function LivePreview({ previewFontSize }: { previewFontSize: FontSize }) {
 
 export function Appearance() {
   const { theme, setTheme } = useTheme();
-  const { colorTheme, setColorTheme, bgTheme, setBgTheme, fontSize, setFontSize, reset } =
-    useAppearance();
+  const {
+    colorTheme,
+    setColorTheme,
+    bgTheme,
+    setBgTheme,
+    fontSize,
+    setFontSize,
+    autoOpenChat,
+    setAutoOpenChat,
+    reset,
+  } = useAppearance();
   const [draftFontSize, setDraftFontSize] = useState<FontSize>(fontSize);
 
   useEffect(() => {
@@ -438,6 +447,32 @@ export function Appearance() {
               onChange={setDraftFontSize}
               onApply={() => setFontSize(draftFontSize)}
             />
+          </Card>
+
+          {/* Messaging */}
+          <Card className="border-line/10 p-5">
+            <SectionHeader
+              icon={Icons.MessageSquare}
+              title="Messaging"
+              hint="Control how your mentor conversations behave across the app."
+            />
+            <label
+              htmlFor="auto-open-chat"
+              className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-line/12 p-3.5 transition hover:border-line/25"
+            >
+              <span>
+                <span className="block text-sm font-bold text-ink">Auto-open chats on the Mentors page</span>
+                <span className="mt-0.5 block text-xs text-ink-soft">
+                  Pop the messages window open automatically whenever you visit Mentors.
+                </span>
+              </span>
+              <Toggle
+                id="auto-open-chat"
+                checked={autoOpenChat}
+                onChange={setAutoOpenChat}
+                label="Auto-open chats on the Mentors page"
+              />
+            </label>
           </Card>
         </div>
 

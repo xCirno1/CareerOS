@@ -115,6 +115,13 @@ import {
   MousePointerClick,
   Undo2,
   AlertTriangle,
+  Send,
+  MessageSquare,
+  MessageCircle,
+  Inbox,
+  Paperclip,
+  Smile,
+  CornerDownLeft,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -229,6 +236,13 @@ export const Icons = {
   MousePointerClick,
   Undo2,
   AlertTriangle,
+  Send,
+  MessageSquare,
+  MessageCircle,
+  Inbox,
+  Paperclip,
+  Smile,
+  CornerDownLeft,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icons;
