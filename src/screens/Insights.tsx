@@ -760,13 +760,13 @@ function SalaryPanel() {
             <div
               key={n.id}
               className={cn(
-                'grid grid-cols-[7.5rem_1fr] items-center gap-3 rounded-2xl border p-2.5 sm:grid-cols-[9rem_1fr]',
+                'grid grid-cols-1 gap-3 rounded-2xl border p-3 sm:grid-cols-[13rem_minmax(0,1fr)] sm:items-center lg:grid-cols-[16rem_minmax(0,1fr)]',
                 isCurrent ? 'border-brand/40 bg-brand/[0.04]' : 'border-line/10 bg-surface-2',
               )}
             >
               <Link to={`/node/${n.id}`} className="focus-ring min-w-0 rounded-lg">
-                <p className="flex items-center gap-1.5 truncate text-sm font-bold text-ink">
-                  {n.title}
+                <p className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-bold leading-tight text-ink">
+                  <span>{n.title}</span>
                   {isCurrent && <Badge tone="brand">You</Badge>}
                 </p>
                 <p className="truncate text-[11px] text-ink-mute">{fmtK(medianSalary(n))} median</p>
@@ -820,14 +820,14 @@ function SalaryPanel() {
       </div>
 
       {/* axis */}
-      <div className="ml-[7.5rem] mt-1 hidden justify-between pl-3 text-[10px] font-semibold text-ink-mute sm:ml-[9rem] sm:flex">
+      <div className="mt-1 hidden justify-between pl-3 text-[10px] font-semibold text-ink-mute sm:ml-[13rem] sm:flex lg:ml-[16rem]">
         {ticks.map((t) => (
           <span key={t}>${t}k</span>
         ))}
       </div>
 
       {noBand.length > 0 && (
-        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-surface-2 p-3 text-xs text-ink-soft">
+        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-surface-2 p-3 pr-28 text-xs text-ink-soft sm:pr-36">
           <Icons.Info size={14} className="shrink-0 text-brand" />
           No posted salary band:
           {noBand.map((n) => (
