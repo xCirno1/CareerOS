@@ -39,6 +39,7 @@ import { TransitionLab } from '@/screens/TransitionLab';
 import { Community } from '@/screens/Community';
 import { CommunityBrowse } from '@/screens/CommunityBrowse';
 import { MentorMatch } from '@/screens/MentorMatch';
+import { Timetable } from '@/screens/Timetable';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -95,6 +96,14 @@ export default function App() {
                   element={
                     <ShellRoute>
                       <Insights />
+                    </ShellRoute>
+                  }
+                />
+                <Route
+                  path="/timetable"
+                  element={
+                    <ShellRoute>
+                      <Timetable />
                     </ShellRoute>
                   }
                 />

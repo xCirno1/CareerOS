@@ -612,7 +612,7 @@ export function MentorMatch() {
 }
 
 function MentorMatchContent() {
-  const { careerProfile, target } = useAppStore();
+  const { careerProfile, target, bookMentorSession } = useAppStore();
   const toast = useToast();
   const currentNode = getNode(careerProfile.currentNodeId) ?? NODES[0];
   const targetNode = getNode(target || careerProfile.targetNodeId) ?? NODES[4];
@@ -904,7 +904,19 @@ function MentorMatchContent() {
           onClose={() => setBookingMentor(null)}
           onBook={(slot) => {
             setBookedSessions((prev) => ({ ...prev, [bookingMentor.id]: slot }));
-            toast(`Session booked with ${firstName(bookingMentor.name)} for ${slot}`, {
+            // Surface the booking on the Timetable via the shared store.
+            bookMentorSession({
+              mentorId: bookingMentor.id,
+              mentorName: bookingMentor.name,
+              initials: bookingMentor.initials,
+              colorClass: bookingMentor.colorClass,
+              role: bookingMentor.currentRole,
+              company: bookingMentor.company,
+              slot,
+              topic: bookingMentor.topics[0],
+              nodeId: bookingMentor.nodeIds[0],
+            });
+            toast(`Session booked with ${firstName(bookingMentor.name)} for ${slot} — added to your timetable`, {
               icon: Icons.Calendar,
               tone: 'success',
             });
