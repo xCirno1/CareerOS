@@ -675,7 +675,7 @@ export const PATTERNS: PatternRow[] = [
   { id: 'p5', label: 'Frontend → MBA → Product', share: 7, outcome: 'Higher ceiling, slower', kind: 'study' },
 ];
 
-// ---- Assessment options -------------------------------------------------
+// ---- Onboarding options -------------------------------------------------
 
 export const ASSESSMENT = {
   background: [

@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useAppStore } from '@/lib/appStore';
+import { useAppearance } from '@/lib/appearance';
 import { useSubscription } from '@/lib/subscription';
 import { Button, Card, Badge, Tooltip, useToast } from '@/ui/components';
 import { Paywall } from '@/components/Paywall';
+import { MentorChat } from '@/components/MentorChat';
+import { seedConversations, type ChatMessage } from '@/lib/mentorChat';
 import { NODES, getNode, getNodeIcon, type CareerNode } from '@/lib/mockData';
 
 type MatchStatus = 'none' | 'pending' | 'matched' | 'dismissed';
@@ -613,14 +616,17 @@ export function MentorMatch() {
 
 function MentorMatchContent() {
   const { careerProfile, target, bookMentorSession } = useAppStore();
+  const { autoOpenChat } = useAppearance();
   const toast = useToast();
   const currentNode = getNode(careerProfile.currentNodeId) ?? NODES[0];
   const targetNode = getNode(target || careerProfile.targetNodeId) ?? NODES[4];
   const [filter, setFilter] = useState<FilterId>('all');
   const [query, setQuery] = useState('');
   const [topic, setTopic] = useState('all');
-  const [messageMentor, setMessageMentor] = useState<Mentor | null>(null);
   const [bookingMentor, setBookingMentor] = useState<Mentor | null>(null);
+  const [messagesByMentor, setMessagesByMentor] = useState<Record<string, ChatMessage[]>>(seedConversations);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInitialId, setChatInitialId] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, MatchStatus>>({
     m3: 'matched',
@@ -699,6 +705,31 @@ function MentorMatchContent() {
     setFilter('matched');
   };
 
+  const openChat = (mentorId?: string) => {
+    setChatInitialId(mentorId ?? null);
+    setChatOpen(true);
+  };
+
+  // Auto-open the chat window on visit when the preference is enabled.
+  const didAutoOpen = useRef(false);
+  useEffect(() => {
+    if (didAutoOpen.current || !autoOpenChat) return;
+    didAutoOpen.current = true;
+    setChatInitialId(null);
+    setChatOpen(true);
+  }, [autoOpenChat]);
+
+  // Mentors you have a relationship with get a conversation thread.
+  const chatMentors = mentors.filter((mentor) => {
+    const status = statuses[mentor.id] ?? 'none';
+    return status === 'matched' || status === 'pending' || Boolean(messagesByMentor[mentor.id]?.length);
+  });
+
+  const unreadCount = chatMentors.filter((mentor) => {
+    const list = messagesByMentor[mentor.id];
+    return Boolean(list?.length) && list[list.length - 1].from === 'mentor';
+  }).length;
+
   const activeCount = Object.values(statuses).filter((s) => s === 'matched' || s === 'pending').length;
   const visibleColumns: [VisibleMentor[], VisibleMentor[]] = [[], []];
   visible.forEach((item, index) => {
@@ -722,7 +753,7 @@ function MentorMatchContent() {
         onRequest={request}
         onDismiss={dismiss}
         onAccept={accept}
-        onMessage={setMessageMentor}
+        onMessage={(m) => openChat(m.id)}
         onBook={setBookingMentor}
       />
     );
@@ -730,18 +761,35 @@ function MentorMatchContent() {
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6">
-      <div className="mb-5">
-        <Badge tone="brand" icon={Icons.GraduationCap}>
-          Mentor Match
-        </Badge>
-        <h1 className="mt-2.5 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-          Find your mentor
-        </h1>
-        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          Matched to your path from <span className="font-semibold text-ink">{currentNode.title}</span>{' '}
-          to <span className="font-semibold text-ink">{targetNode.title}</span>. Search by mentor,
-          company, topic, role, or career node.
-        </p>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <Badge tone="brand" icon={Icons.GraduationCap}>
+            Mentor Match
+          </Badge>
+          <h1 className="mt-2.5 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            Find your mentor
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
+            Matched to your path from <span className="font-semibold text-ink">{currentNode.title}</span>{' '}
+            to <span className="font-semibold text-ink">{targetNode.title}</span>. Search by mentor,
+            company, topic, role, or career node.
+          </p>
+        </div>
+        {chatMentors.length > 0 && (
+          <button
+            type="button"
+            onClick={() => openChat()}
+            className="focus-ring relative inline-flex shrink-0 items-center gap-2 rounded-2xl border border-line/12 bg-surface px-3.5 py-2 text-sm font-bold text-ink-soft transition hover:border-brand/30 hover:text-ink"
+          >
+            <Icons.MessageSquare size={16} />
+            <span className="hidden sm:inline">Messages</span>
+            {unreadCount > 0 && (
+              <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -884,17 +932,13 @@ function MentorMatchContent() {
         </>
       )}
 
-      {messageMentor && (
-        <MessageModal
-          mentor={messageMentor}
-          currentNode={currentNode}
-          targetNode={targetNode}
-          onClose={() => setMessageMentor(null)}
-          onSend={(body) => {
-            toast(`Message sent to ${firstName(messageMentor.name)}`, { icon: Icons.Mail, tone: 'success' });
-            setMessageMentor(null);
-            void body;
-          }}
+      {chatOpen && (
+        <MentorChat
+          mentors={chatMentors}
+          messages={messagesByMentor}
+          setMessages={setMessagesByMentor}
+          initialMentorId={chatInitialId}
+          onClose={() => setChatOpen(false)}
         />
       )}
 
@@ -981,52 +1025,6 @@ function ModalShell({
       </div>
     </div>,
     document.body,
-  );
-}
-
-function MessageModal({
-  mentor,
-  currentNode,
-  targetNode,
-  onClose,
-  onSend,
-}: {
-  mentor: Mentor;
-  currentNode: CareerNode;
-  targetNode: CareerNode;
-  onClose: () => void;
-  onSend: (body: string) => void;
-}) {
-  const [body, setBody] = useState(
-    `Hi ${firstName(mentor.name)}, I'd love your advice on moving from ${currentNode.title} toward ${targetNode.title}. Could we use the first session to review my route and the strongest proof point I should build next?`,
-  );
-
-  return (
-    <ModalShell title={`Message ${firstName(mentor.name)}`} icon={Icons.Mail} onClose={onClose}>
-      <div className="space-y-4 p-5">
-        <div className="rounded-2xl bg-surface-2 p-3 text-xs leading-5 text-ink-soft">
-          <span className="font-bold text-ink">Route brief:</span> {currentNode.title} to {targetNode.title}.
-          CareerOS includes your target, key gaps, and suggested first-session agenda with this message.
-        </div>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-semibold text-ink-soft">Message</span>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={6}
-            className="focus-ring w-full resize-y rounded-2xl border border-line/15 bg-surface px-3.5 py-2.5 text-sm leading-6 text-ink outline-none transition focus:border-brand/50 focus:ring-2 focus:ring-brand/30"
-          />
-        </label>
-        <div className="flex justify-end gap-2 border-t border-line/10 pt-4">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button icon={Icons.Mail} onClick={() => onSend(body)} disabled={!body.trim()}>
-            Send message
-          </Button>
-        </div>
-      </div>
-    </ModalShell>
   );
 }
 

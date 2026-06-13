@@ -30,7 +30,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const actions: Result[] = [
       { id: 'a-map', label: 'Open the Traileers map', icon: Icons.Network, group: 'Actions', run: go('/map') },
       { id: 'a-route', label: 'Plan a pathway', icon: Icons.Route, group: 'Actions', run: go('/routing') },
-      { id: 'a-assess', label: 'Run the assessment', icon: Icons.ClipboardCheck, group: 'Actions', run: go('/onboarding') },
+      { id: 'a-onboarding', label: 'Start onboarding', icon: Icons.ClipboardCheck, group: 'Actions', run: go('/onboarding') },
       {
         id: 'a-theme',
         label: 'Toggle light / dark theme',

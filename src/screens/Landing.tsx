@@ -291,8 +291,8 @@ function CardFrame({
 /* Each card is a distinct, vivid CareerOS "surface" — like Figma's row of
    real-site thumbnails. Fixed colors so they read the same in light/dark. */
 const GALLERY: ReactNode[] = [
-  // Assessment (navy)
-  <CardFrame key="assess" label="Assessment" className="bg-navy text-white">
+  // Onboarding (navy)
+  <CardFrame key="onboarding" label="Onboarding" className="bg-navy text-white">
     <p className="font-display text-xl font-extrabold leading-tight">Where are you, really?</p>
     <div className="mt-auto flex flex-wrap gap-2 pt-4">
       {['Self-taught', 'Fast growth', 'Remote', 'React', 'Design'].map((c) => (
@@ -725,7 +725,7 @@ function StoryStage() {
 /* ================================================================== */
 /* Feature sections — alternating editorial rows w/ real visuals       */
 /* ================================================================== */
-function VisualAssessment() {
+function VisualOnboarding() {
   // a focused node with concentric "match" rings + faint neighbours
   return (
     <svg viewBox="0 0 460 320" className="w-full">
@@ -949,10 +949,10 @@ const FEATURES: {
 }[] = [
     {
       header: 'Find your real starting point',
-      body: 'Answer a two-minute assessment and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
+      body: 'Complete onboarding and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
       to: '/onboarding',
-      link: 'Take the assessment',
-      visual: <VisualAssessment />,
+      link: 'Start onboarding',
+      visual: <VisualOnboarding />,
     },
     {
       header: 'See every move — then the best route',
@@ -1110,9 +1110,9 @@ const HOW_STEPS: {
     {
       n: '01',
       title: 'Find your route',
-      body: 'A two-minute assessment places you on the map from your real background, skills and goals.',
+      body: 'Onboarding places you on the map from your real background, skills and goals.',
       to: '/onboarding',
-      cta: 'Start the assessment',
+      cta: 'Start onboarding',
       accent: 'teal',
     },
     {
@@ -1439,7 +1439,7 @@ function CTA({ onLaunch }: { onLaunch: () => void }) {
 export const FOOTER_PATH_MAP: Record<string, string> = {
   'Trailers': '/trailers',
   'Map': '/map',
-  'Assessment': '/assessment',
+  'Onboarding': '/onboarding',
   'Routing': '/routing',
   'Pricing': '/pricing',
   'About': '/about',
@@ -1457,7 +1457,7 @@ export const FOOTER_PATH_MAP: Record<string, string> = {
 };
 
 export const FOOTER_COLS: [string, string[]][] = [
-  ['Product', ['Trailers', 'Map', 'Assessment', 'Routing', 'Pricing']],
+  ['Product', ['Trailers', 'Map', 'Onboarding', 'Routing', 'Pricing']],
   ['Company', ['About', 'Careers', 'Blog', 'Contact']],
   ['Resources', ['Help center', 'Methodology', 'Changelog', 'Status']],
   ['Legal', ['Privacy', 'Terms', 'Security', 'Cookies']],

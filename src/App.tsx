@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
 import { AppearanceProvider } from '@/lib/appearance';
 import { AppStoreProvider } from '@/lib/appStore';
@@ -13,7 +13,6 @@ import { Appearance } from '@/screens/Appearance';
 import { Onboarding } from '@/screens/Onboarding';
 import { TraileersMap } from '@/screens/TraileersMap';
 import { NodeDetail } from '@/screens/NodeDetail';
-import { Assessment } from '@/screens/Assessment';
 import { Routing } from '@/screens/Routing';
 import { Insights } from '@/screens/Insights';
 import { Profile } from '@/screens/Profile';
@@ -40,6 +39,7 @@ import { Community } from '@/screens/Community';
 import { CommunityBrowse } from '@/screens/CommunityBrowse';
 import { MentorMatch } from '@/screens/MentorMatch';
 import { Timetable } from '@/screens/Timetable';
+import { NotFound } from '@/screens/NotFound';
 
 function ShellRoute({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
@@ -72,14 +72,6 @@ export default function App() {
                   element={
                     <ShellRoute>
                       <NodeDetail />
-                    </ShellRoute>
-                  }
-                />
-                <Route
-                  path="/assessment"
-                  element={
-                    <ShellRoute>
-                      <Assessment />
                     </ShellRoute>
                   }
                 />
@@ -164,7 +156,7 @@ export default function App() {
                 <Route path="/security" element={<PublicLayout><Security /></PublicLayout>} />
                 <Route path="/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
 
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
 
               {/* Global prototype affordance — present on every route */}

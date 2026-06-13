@@ -10,7 +10,7 @@ import { CURRENT_NODE_ID, TARGET_NODE_ID } from '@/lib/mockData';
 
 /**
  * Lightweight client-side app state for the prototype. This is the local
- * "wizard of oz" profile: onboarding/assessment answers create a believable
+ * "wizard of oz" profile: onboarding answers create a believable
  * career state, then map/routing/detail screens read that same state.
  */
 export interface CareerProfile {
@@ -23,7 +23,7 @@ export interface CareerProfile {
   targetNodeId: string;
   priorities: string[];
   resumeName: string;
-  source: 'default' | 'onboarding' | 'assessment' | 'resume';
+  source: 'default' | 'onboarding' | 'resume';
   updatedAt: string;
 }
 
