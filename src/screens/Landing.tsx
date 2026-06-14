@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icons, type LucideIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useTheme } from '@/lib/theme';
@@ -239,9 +239,300 @@ function Magnetic({ children, strength = 0.4, className }: { children: ReactNode
 /* ================================================================== */
 /* Marketing top nav                                                   */
 /* ================================================================== */
+type NavMenuItem = {
+  label: string;
+  to: string;
+  desc: string;
+  icon: LucideIcon;
+  badge?: string;
+};
+
+const PRODUCT_NAV: NavMenuItem[] = [
+  {
+    label: 'Onboarding',
+    to: '/onboarding',
+    desc: 'Find your starting point in minutes.',
+    icon: Icons.ClipboardCheck,
+  },
+  {
+    label: 'Traileers Map',
+    to: '/map',
+    desc: 'Explore roles as connected career nodes.',
+    icon: Icons.Network,
+  },
+  {
+    label: 'Routing',
+    to: '/routing',
+    desc: 'Compare paths, tradeoffs and feasibility.',
+    icon: Icons.Route,
+  },
+  {
+    label: 'Market Insights',
+    to: '/insights',
+    desc: 'Track salary, demand and momentum.',
+    icon: Icons.LineChart,
+  },
+  {
+    label: 'Timetable',
+    to: '/timetable',
+    desc: 'Turn your route into weekly action.',
+    icon: Icons.Calendar,
+    badge: 'New',
+  },
+  {
+    label: 'Community',
+    to: '/community',
+    desc: 'Join channels mapped to your plan.',
+    icon: Icons.Users,
+  },
+  {
+    label: 'Mentor Match',
+    to: '/mentors',
+    desc: 'Book mentors who fit your target route.',
+    icon: Icons.GraduationCap,
+    badge: 'Pro',
+  },
+];
+
+const PLATFORM_NAV: NavMenuItem[] = [
+  {
+    label: 'CareerOS overview',
+    to: '/',
+    desc: 'The map, route planner and action system in one flow.',
+    icon: Icons.Compass,
+  },
+  {
+    label: 'Starting point',
+    to: '/onboarding',
+    desc: 'Onboard from your background, goals and strengths.',
+    icon: Icons.Target,
+  },
+];
+
+const SOLUTION_NAV: NavMenuItem[] = [
+  {
+    label: 'For career switchers',
+    to: '/onboarding',
+    desc: 'Translate what you know into a route forward.',
+    icon: Icons.GitFork,
+  },
+  {
+    label: 'For students',
+    to: '/timetable',
+    desc: 'Plan study blocks around the career you want.',
+    icon: Icons.BookOpen,
+  },
+  {
+    label: 'For builders',
+    to: '/community',
+    desc: 'Find people moving through the same graph.',
+    icon: Icons.Code2,
+  },
+];
+
+const RESOURCE_NAV: NavMenuItem[] = [
+  {
+    label: 'Methodology',
+    to: '/methodology',
+    desc: 'How routes, odds and role data are modeled.',
+    icon: Icons.Workflow,
+  },
+  {
+    label: 'Help center',
+    to: '/help-center',
+    desc: 'Guides for setup, routing and account basics.',
+    icon: Icons.Lightbulb,
+  },
+  {
+    label: 'Changelog',
+    to: '/changelog',
+    desc: 'New features, fixes and product notes.',
+    icon: Icons.Activity,
+  },
+  {
+    label: 'Status',
+    to: '/status',
+    desc: 'Current platform availability.',
+    icon: Icons.Gauge,
+  },
+];
+
+const COMPANY_NAV: NavMenuItem[] = [
+  {
+    label: 'About',
+    to: '/about',
+    desc: 'Why we are building career navigation.',
+    icon: Icons.Info,
+  },
+  {
+    label: 'Careers',
+    to: '/careers',
+    desc: 'Join the team shaping CareerOS.',
+    icon: Icons.Briefcase,
+  },
+  {
+    label: 'Contact',
+    to: '/contact',
+    desc: 'Talk to us about partnerships or support.',
+    icon: Icons.Mail,
+  },
+];
+
+function NavItemRow({ item, compact = false }: { item: NavMenuItem; compact?: boolean }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      className={cn(
+        'focus-ring group/item grid grid-cols-[auto_1fr] text-left transition hover:bg-line/[0.04]',
+        compact ? 'gap-3 rounded-xl p-3' : 'gap-4 rounded-2xl p-4',
+      )}
+    >
+      <Icon
+        size={compact ? 18 : 21}
+        strokeWidth={2.1}
+        className="mt-0.5 text-brand transition group-hover/item:text-ink"
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-2">
+          <span className={cn('font-bold text-ink', compact ? 'text-sm' : 'text-base')}>
+            {item.label}
+          </span>
+          {item.badge && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-soft">
+              {item.badge}
+            </span>
+          )}
+        </span>
+        <span className="mt-0.5 block text-xs leading-5 text-ink-soft">{item.desc}</span>
+      </span>
+    </Link>
+  );
+}
+
+function DesktopNavDropdown({
+  label,
+  items,
+  align = 'center',
+  kind = 'list',
+}: {
+  label: string;
+  items: NavMenuItem[];
+  align?: 'left' | 'center';
+  kind?: 'product' | 'resources' | 'company' | 'list';
+}) {
+  const widthClass =
+    kind === 'product'
+      ? 'w-[52rem] max-w-[calc(100vw-2rem)] xl:w-[64rem]'
+      : kind === 'resources'
+        ? 'w-[50rem] max-w-[calc(100vw-2rem)]'
+        : kind === 'company'
+          ? 'w-[48rem] max-w-[calc(100vw-2rem)]'
+          : 'w-[25rem]';
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        className="focus-ring flex items-center gap-1 rounded-lg text-[15px] font-medium text-ink transition hover:text-brand"
+      >
+        {label}
+        <Icons.ChevronDown
+          size={15}
+          className="text-ink-mute transition group-hover:rotate-180 group-hover:text-brand"
+          strokeWidth={2.4}
+        />
+      </button>
+      <div
+        className={cn(
+          'invisible absolute top-full z-50 pt-4 opacity-0 transition duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100',
+          align === 'left' ? 'left-0' : 'left-1/2 -translate-x-1/2',
+          widthClass,
+        )}
+      >
+        <div className="overflow-hidden rounded-[1.75rem] border border-line/12 bg-surface/95 p-6 shadow-[0_34px_100px_-42px_rgba(16,33,50,0.58)] backdrop-blur-xl">
+          {kind === 'product' ? (
+            <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+              <div>
+                <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-brand">
+                  Platform
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {PLATFORM_NAV.map((item) => (
+                    <NavItemRow key={item.label} item={item} />
+                  ))}
+                </div>
+                <Link
+                  to="/onboarding"
+                  className="focus-ring mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-all hover:gap-2.5"
+                >
+                  Start with onboarding
+                  <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                </Link>
+              </div>
+              <div>
+                <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-brand">
+                  Products
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {items.map((item) => (
+                    <NavItemRow key={item.label} item={item} compact />
+                  ))}
+                </div>
+                <Link
+                  to="/#toolkit"
+                  className="focus-ring mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-all hover:gap-2.5"
+                >
+                  See the full toolkit
+                  <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                </Link>
+              </div>
+            </div>
+          ) : kind === 'resources' ? (
+            <div className="grid gap-8 lg:grid-cols-[0.65fr_1.35fr]">
+              <div>
+                <div className="overflow-hidden rounded-2xl border border-line/10 bg-canvas/60 p-5">
+                  <Icons.BookOpen size={24} strokeWidth={2.1} className="text-brand" />
+                  <h3 className="mt-4 text-xl font-black tracking-tight text-ink">CareerOS Library</h3>
+                  <p className="mt-2 text-sm leading-6 text-ink-soft">
+                    Learn how career routes, feasibility and market signals work behind the interface.
+                  </p>
+                  <Link
+                    to="/methodology"
+                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand"
+                  >
+                    Explore resources
+                    <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                  </Link>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {items.map((item) => (
+                  <NavItemRow key={item.label} item={item} />
+                ))}
+              </div>
+            </div>
+          ) : kind === 'company' ? (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {items.map((item) => (
+                <NavItemRow key={item.label} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-1">
+              {items.map((item) => (
+                <NavItemRow key={item.label} item={item} compact />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MarketingNav({ hidden = false }: { hidden?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
-  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -261,37 +552,27 @@ export function MarketingNav({ hidden = false }: { hidden?: boolean }) {
           <Logo />
         </Link>
         <nav className="hidden items-center gap-6 lg:flex">
-          {[
-            ['Product', true],
-            ['Solutions', true],
-            ['Community', true],
-            ['Resources', true],
-            ['Pricing', false],
-          ].map(([l, caret]) => {
-            if (l === 'Pricing') {
-              return (
-                <Link
-                  key={l as string}
-                  to="/pricing"
-                  className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
-                >
-                  {l as string}
-                </Link>
-              );
-            }
-            return (
-              <a
-                key={l as string}
-                href={location.pathname === '/' ? '#features' : '/#features'}
-                className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
-              >
-                {l as string}
-                {caret && <Icons.ChevronDown size={15} className="text-ink-mute" strokeWidth={2.4} />}
-              </a>
-            );
-          })}
+          <DesktopNavDropdown label="Product" items={PRODUCT_NAV} kind="product" align="left" />
+          <DesktopNavDropdown label="Solutions" items={SOLUTION_NAV} />
+          <DesktopNavDropdown label="Resources" items={RESOURCE_NAV} kind="resources" />
+          <DesktopNavDropdown label="Company" items={COMPANY_NAV} kind="company" />
+          <Link
+            to="/pricing"
+            className="flex items-center gap-1 text-[15px] font-medium text-ink transition hover:text-brand"
+          >
+            Pricing
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-expanded={mobileOpen}
+            aria-label="Open feature menu"
+            onClick={() => setMobileOpen((open) => !open)}
+            className="focus-ring grid h-10 w-10 place-items-center rounded-full border border-line/20 text-ink transition hover:border-line/40 hover:text-brand lg:hidden"
+          >
+            {mobileOpen ? <Icons.X size={18} /> : <Icons.Menu size={18} />}
+          </button>
           <ThemeToggle />
           <Link to="/login" className="hidden px-2 text-[15px] font-medium text-ink hover:text-brand sm:block">
             Log in
@@ -301,6 +582,50 @@ export function MarketingNav({ hidden = false }: { hidden?: boolean }) {
               Get started
             </button>
           </Link>
+        </div>
+      </div>
+      <div
+        className={cn(
+          'lg:hidden',
+          mobileOpen ? 'block border-t border-line/10 bg-canvas/95 backdrop-blur-md' : 'hidden',
+        )}
+      >
+        <div className="mx-auto max-h-[calc(100dvh-4rem)] max-w-6xl overflow-y-auto px-5 py-4 sm:px-8">
+          <div className="grid gap-1">
+            {PRODUCT_NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="focus-ring grid grid-cols-[auto_1fr_auto] gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-line/[0.04]"
+                >
+                  <Icon size={19} strokeWidth={2.1} className="mt-0.5 text-brand" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-ink">{item.label}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-ink-soft">{item.desc}</span>
+                  </span>
+                  <Icons.ChevronRight size={15} className="mt-1 text-ink-mute" strokeWidth={2.4} />
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line/10 pt-3">
+            {[
+              { label: 'Pricing', to: '/pricing' },
+              { label: 'Resources', to: '/help-center' },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                onClick={() => setMobileOpen(false)}
+                className="focus-ring rounded-xl border border-line/10 px-3 py-2.5 text-center text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </header>
