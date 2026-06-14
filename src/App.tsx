@@ -5,9 +5,11 @@ import { AppearanceProvider } from '@/lib/appearance';
 import { AppStoreProvider } from '@/lib/appStore';
 import { ProfileProvider } from '@/lib/profile';
 import { SubscriptionProvider } from '@/lib/subscription';
+import { WalkthroughProvider } from '@/lib/walkthrough';
 import { ToastProvider } from '@/ui/components';
 import { AppShell } from '@/layout/AppShell';
 import { PrototypeNotice } from '@/components/PrototypeNotice';
+import { Walkthrough } from '@/components/Walkthrough';
 import { Landing } from '@/screens/Landing';
 import { Appearance } from '@/screens/Appearance';
 import { Onboarding } from '@/screens/Onboarding';
@@ -52,6 +54,7 @@ export default function App() {
       <AppStoreProvider>
         <ProfileProvider>
           <SubscriptionProvider>
+          <WalkthroughProvider>
           <ToastProvider>
             <BrowserRouter basename={import.meta.env.BASE_URL}>
               <Routes>
@@ -161,8 +164,11 @@ export default function App() {
 
               {/* Global prototype affordance — present on every route */}
               <PrototypeNotice />
+              {/* Guided product tour — drives navigation across screens */}
+              <Walkthrough />
             </BrowserRouter>
           </ToastProvider>
+          </WalkthroughProvider>
           </SubscriptionProvider>
         </ProfileProvider >
       </AppStoreProvider >

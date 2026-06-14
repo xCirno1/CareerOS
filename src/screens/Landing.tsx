@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Icons } from '@/lib/icons';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Icons, type LucideIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
+import { useTheme } from '@/lib/theme';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
 import {
   useScrollLerp,
@@ -11,9 +12,25 @@ import {
   useMediaQuery,
 } from '@/lib/hooks';
 import { clamp01, lerp, smoothstep, bandOpacity } from '@/lib/math';
-import { getNode } from '@/lib/mockData';
 import { Button, Logo, ThemeToggle, Reveal } from '@/ui/components';
 import { RocketLaunch, RocketSVG } from '@/ui/transitions';
+
+// Real product screenshots — every shot has a light + dark capture so it tracks
+// the active theme. (Vite resolves these to hashed URLs at build.)
+import routeLight from '@/assets/route-light.png';
+import routeDark from '@/assets/route-dark.png';
+import salaryLight from '@/assets/salary-light.png';
+import salaryDark from '@/assets/salary-dark.png';
+import scoreLight from '@/assets/score-light.png';
+import scoreDark from '@/assets/score-dark.png';
+import startLight from '@/assets/starting-point-light.png';
+import startDark from '@/assets/starting-point-dark.png';
+import timetableLight from '@/assets/timetable-light.png';
+import timetableDark from '@/assets/timetable-dark.png';
+import communityLight from '@/assets/community-light.png';
+import communityDark from '@/assets/community-dark.png';
+import mentorMatchLight from '@/assets/mentor-match-light.png';
+import mentorMatchDark from '@/assets/mentor-match-dark.png';
 
 const ACCENT_HEX: Record<string, string> = {
   teal: '#2f7f8f',
@@ -21,6 +38,61 @@ const ACCENT_HEX: Record<string, string> = {
   amber: '#f2b95e',
   navy: '#17324d',
 };
+
+/* ================================================================== */
+/* Theme-aware product screenshots                                     */
+/* Each entry carries a light + dark capture; <Shot> swaps on theme.   */
+/* ================================================================== */
+const SHOTS = {
+  route: {
+    light: routeLight,
+    dark: routeDark,
+    alt: 'The Traileers map — career roles drawn as connected nodes, with a recommended amber route from “you” (Frontend Engineer) to a target role.',
+  },
+  salary: {
+    light: salaryLight,
+    dark: salaryDark,
+    alt: 'Insights view — salary bands compared across roles, ranked by median pay, each tagged with its uplift over your current role.',
+  },
+  score: {
+    light: scoreLight,
+    dark: scoreDark,
+    alt: 'A recommended route card scored on feasibility, time to target, salary uplift and learning curve, with the role-by-role path beneath.',
+  },
+  start: {
+    light: startLight,
+    dark: startDark,
+    alt: 'A route summary strip: from your current role, via an intermediate step, to your target role.',
+  },
+  timetable: {
+    light: timetableLight,
+    dark: timetableDark,
+    alt: 'Timetable view showing a weekly career plan with scheduled learning blocks, readiness progress and route tasks.',
+  },
+  community: {
+    light: communityLight,
+    dark: communityDark,
+    alt: 'Community view showing route-based channels, an active discussion thread and peers following similar career paths.',
+  },
+  mentorMatch: {
+    light: mentorMatchLight,
+    dark: mentorMatchDark,
+    alt: 'Mentor Match view showing ranked mentor recommendations, route fit details and a booking panel.',
+  },
+} as const;
+
+function Shot({ name, className }: { name: keyof typeof SHOTS; className?: string }) {
+  const { theme } = useTheme();
+  const s = SHOTS[name];
+  return (
+    <img
+      src={theme === 'dark' ? s.dark : s.light}
+      alt={s.alt}
+      loading="lazy"
+      className={cn('block w-full rounded-xl', className)}
+    />
+  );
+}
 
 /* ================================================================== */
 /* Shared SVG primitive: a labelled graph node "chip"                  */
@@ -760,60 +832,6 @@ function VisualOnboarding() {
   );
 }
 
-function VisualRouting() {
-  const ids = ['frontend-dev', 'fullstack-dev', 'data-analyst', 'product-lead'];
-  const pos: Record<string, [number, number]> = {
-    'frontend-dev': [70, 90],
-    'fullstack-dev': [240, 60],
-    'data-analyst': [200, 250],
-    'product-lead': [400, 160],
-  };
-  const route = ['frontend-dev', 'data-analyst', 'product-lead'];
-  const routeD = route.map((id, i) => `${i ? 'L' : 'M'}${pos[id][0]},${pos[id][1]}`).join(' ');
-  return (
-    <svg viewBox="0 0 460 320" className="w-full">
-      <line x1={70} y1={90} x2={240} y2={60} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
-      <line x1={240} y1={60} x2={400} y2={160} stroke="rgb(var(--c-line))" strokeOpacity={0.16} />
-      <path
-        className="draw-line"
-        d={routeD}
-        fill="none"
-        stroke={ACCENT_HEX.amber}
-        strokeWidth={4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
-        strokeDasharray={1}
-        strokeDashoffset={0}
-        style={{ filter: 'drop-shadow(0 2px 8px rgba(242,185,94,0.4))' }}
-      />
-      {ids.map((id) => {
-        const n = getNode(id)!;
-        const [x, y] = pos[id];
-        const state: ChipState =
-          id === 'frontend-dev'
-            ? 'current'
-            : id === 'product-lead'
-              ? 'target'
-              : route.includes(id)
-                ? 'active'
-                : 'idle';
-        return (
-          <NodeChip
-            key={id}
-            x={x}
-            y={y}
-            label={n.title}
-            accent={n.accent}
-            state={state}
-            tag={id === 'frontend-dev' ? 'You' : id === 'product-lead' ? 'Target' : undefined}
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
 function VisualFeasibility() {
   const steps = [
     { label: 'Frontend → Product Analyst', v: 72 },
@@ -952,21 +970,26 @@ const FEATURES: {
       body: 'Complete onboarding and CareerOS places you on the map from your background, skills and what you actually want next — no résumé upload required.',
       to: '/onboarding',
       link: 'Start onboarding',
-      visual: <VisualOnboarding />,
+      visual: (
+        <div className="flex flex-col gap-6">
+          <Shot name="start" />
+          <VisualOnboarding />
+        </div>
+      ),
     },
     {
       header: 'See every move — then the best route',
       body: 'Every viable path to your destination is laid out at once, with one recommended route resolved from real tradeoffs: time, qualifications, pay and your own interests.',
-      to: '/routing',
-      link: 'Explore routing',
-      visual: <VisualRouting />,
+      to: '/map',
+      link: 'Open the map',
+      visual: <Shot name="route" className="ring-1 ring-line/10 shadow-soft" />,
     },
     {
       header: 'Score every step on real outcomes',
       body: 'Each hop carries honest odds and a typical timeline, compared against thousands of historical trajectories. Grounded in evidence, not vibes.',
       to: '/routing',
       link: 'See feasibility',
-      visual: <VisualFeasibility />,
+      visual: <Shot name="score" />,
     },
     {
       header: 'Track live demand & salary',
@@ -985,9 +1008,20 @@ const FEATURES: {
   ];
 
 function FeatureSections() {
-  const [active, setActive] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const featureParam = Number(searchParams.get('feature'));
+  const active = Number.isInteger(featureParam) && featureParam >= 0 && featureParam < FEATURES.length
+    ? featureParam
+    : 0;
   const panelRef = useRef<HTMLDivElement>(null);
   const first = useRef(true);
+
+  const setActive = (index: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (index === 0) next.delete('feature');
+    else next.set('feature', String(index));
+    setSearchParams(next);
+  };
 
   useEffect(() => {
     const el = panelRef.current;
@@ -1091,6 +1125,249 @@ function FeatureSections() {
             <div key={active}>{FEATURES[active].visual}</div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Beyond the map — the rest of the toolkit (newer app surfaces)        */
+/* ================================================================== */
+type ToolkitItem = {
+  to: string;
+  icon: LucideIcon;
+  title: string;
+  body: string;
+  cta: string;
+  shot?: keyof typeof SHOTS;
+  previewAlt: string;
+  badge?: string;
+};
+
+const MORE: ToolkitItem[] = [
+    {
+      to: '/insights',
+      icon: Icons.LineChart,
+      title: 'Market Insights',
+      body: 'See how every role stacks up — salary, demand and momentum across the whole map, ranked, compared and tracked over time.',
+      cta: 'Open insights',
+      shot: 'salary',
+      previewAlt:
+        'Market Insights screenshot showing salary bands, demand momentum and role comparisons across the career map.',
+    },
+    {
+      to: '/timetable',
+      icon: Icons.Calendar,
+      title: 'Timetable',
+      body: 'A weekly plan that turns your route into real readiness — schedule career blocks, track the hours, tick off the work and undo anything.',
+      cta: 'Plan your week',
+      shot: 'timetable',
+      previewAlt:
+        'Timetable screenshot showing a weekly career plan with scheduled learning blocks, readiness progress and route tasks.',
+    },
+    {
+      to: '/community',
+      icon: Icons.Users,
+      title: 'Community',
+      body: 'Career channels pinned straight from your plan — compare notes with people walking the same route as you.',
+      cta: 'Join the channels',
+      shot: 'community',
+      previewAlt:
+        'Community screenshot showing route-based channels, an active discussion thread and peers following similar career paths.',
+    },
+    {
+      to: '/mentors',
+      icon: Icons.GraduationCap,
+      title: 'Mentor Match',
+      body: 'Match with mentors mapped to your target route, message them your route brief and book sessions with an agenda.',
+      cta: 'Find a mentor',
+      shot: 'mentorMatch',
+      previewAlt:
+        'Mentor Match screenshot showing ranked mentor recommendations, route fit details and a booking panel.',
+      badge: 'Pro',
+    },
+  ];
+
+function ToolkitPreviewFrame({ item }: { item: ToolkitItem }) {
+  if (item.shot) {
+    return (
+      <div className="grid min-h-[13rem] place-items-center bg-canvas/70 p-2 sm:min-h-[20rem] sm:p-4 lg:min-h-[24rem]">
+        <Shot
+          name={item.shot}
+          className="max-h-[13rem] w-auto max-w-full rounded-xl object-contain sm:max-h-[20rem] lg:max-h-[24rem]"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="img"
+      aria-label={item.previewAlt}
+      className="relative flex min-h-[13rem] overflow-hidden bg-surface-2/40 sm:min-h-[20rem] lg:min-h-[24rem]"
+    >
+      <div className="absolute inset-x-0 top-0 flex h-10 items-center gap-2 border-b border-line/10 px-4">
+        <span className="h-1.5 w-1.5 rounded-full bg-ink-mute/35" />
+        <span className="h-1.5 w-1.5 rounded-full bg-ink-mute/25" />
+        <span className="h-1.5 w-1.5 rounded-full bg-ink-mute/20" />
+        <span className="ml-3 h-px flex-1 bg-line/20" />
+      </div>
+      <div className="grid w-full grid-cols-[0.85fr_1.15fr] gap-4 px-4 pb-4 pt-14 sm:gap-6 sm:px-6 sm:pb-6">
+        <div className="space-y-3">
+          <div className="h-2 w-16 rounded-full bg-brand/60" />
+          <div className="space-y-2">
+            <div className="h-8 rounded-xl border border-line/10 bg-surface" />
+            <div className="h-8 rounded-xl border border-line/10 bg-surface" />
+            <div className="h-8 rounded-xl border border-line/10 bg-surface" />
+          </div>
+        </div>
+        <div className="min-w-0 rounded-2xl border border-line/10 bg-canvas/70 p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="h-2 w-20 rounded-full bg-ink-mute/25" />
+            <div className="h-2 w-10 rounded-full bg-brand/50" />
+          </div>
+          <div className="grid h-[calc(100%-1.25rem)] grid-cols-5 gap-1.5">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'rounded-md border border-line/10',
+                  i % 5 === 1 || i % 7 === 0 ? 'bg-brand/20' : 'bg-surface/80',
+                  i % 6 === 0 && 'bg-amber/20',
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MoreFeatures() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const toolParam = Number(searchParams.get('tool'));
+  const active = Number.isInteger(toolParam) && toolParam >= 0 && toolParam < MORE.length
+    ? toolParam
+    : 0;
+  const selected = MORE[active];
+  const SelectedIcon = selected.icon;
+
+  const setActive = (index: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (index === 0) next.delete('tool');
+    else next.set('tool', String(index));
+    setSearchParams(next);
+  };
+
+  return (
+    <section id="toolkit" className="border-t border-line/10">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 lg:py-28">
+        <Reveal className="grid gap-6 lg:grid-cols-[0.95fr_1fr] lg:items-end">
+          <div>
+            <Eyebrow>The whole toolkit</Eyebrow>
+            <h2 className="mt-4 font-display text-3xl font-black tracking-[-0.02em] text-ink sm:text-5xl">
+              More than a map. Your whole career, in motion.
+            </h2>
+          </div>
+          <p className="max-w-2xl text-base leading-7 text-ink-soft sm:text-lg lg:justify-self-end">
+            Once you’re on the map, CareerOS turns insight, planning, community and mentor support
+            into one connected route system.
+          </p>
+        </Reveal>
+
+        <Reveal>
+          <div className="mt-8 overflow-hidden border-y border-line/12 bg-surface/70 shadow-[0_28px_90px_-56px_rgba(16,33,50,0.55)] backdrop-blur sm:mt-12 sm:rounded-[2rem] sm:border">
+            <div className="grid lg:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]">
+              <div className="border-b border-line/12 lg:border-b-0 lg:border-r">
+                <div className="grid divide-y divide-line/10">
+                  {MORE.map((m, i) => {
+                    const Icon = m.icon;
+                    const activeItem = i === active;
+                    return (
+                      <button
+                        key={m.title}
+                        type="button"
+                        aria-pressed={activeItem}
+                        onClick={() => setActive(i)}
+                        className={cn(
+                          'group grid min-w-0 grid-cols-[auto_1fr_auto] gap-3 px-4 py-3.5 text-left transition sm:px-6 sm:py-5 lg:px-7 lg:py-7',
+                          activeItem ? 'bg-line/[0.035]' : 'hover:bg-line/[0.025]',
+                        )}
+                      >
+                        <Icon
+                          size={21}
+                          strokeWidth={2.1}
+                          className={cn(
+                            'mt-0.5 shrink-0 transition',
+                            activeItem ? 'text-brand' : 'text-ink-mute group-hover:text-brand',
+                          )}
+                        />
+                        <span className="min-w-0">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm font-bold tracking-tight text-ink sm:text-base">
+                              {m.title}
+                            </span>
+                            {m.badge && (
+                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-soft">
+                                {m.badge}
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-1 block text-xs font-semibold text-brand sm:hidden">
+                            {activeItem ? 'Previewing now' : m.cta}
+                          </span>
+                          <span className="mt-1 hidden text-sm leading-6 text-ink-soft sm:block">
+                            {m.body}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            'mt-1 h-2 w-2 rounded-full border border-current transition',
+                            activeItem ? 'bg-brand text-brand' : 'text-line group-hover:text-brand',
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="min-w-0 p-4 sm:p-6 lg:p-8">
+                <div className="flex items-start gap-3">
+                  <SelectedIcon size={23} strokeWidth={2.1} className="mt-0.5 shrink-0 text-brand" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold tracking-tight text-ink sm:text-xl">
+                        {selected.title}
+                      </h3>
+                      {selected.badge && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-soft">
+                          {selected.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft sm:text-base">
+                      {selected.body}
+                    </p>
+                  </div>
+                </div>
+
+                <div key={selected.title} className="mt-4 overflow-hidden rounded-2xl border border-line/10 bg-canvas/70 sm:mt-6">
+                  <ToolkitPreviewFrame item={selected} />
+                </div>
+
+                <Link
+                  to={selected.to}
+                  className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-all hover:gap-2.5 sm:mt-5"
+                >
+                  {selected.cta}
+                  <Icons.ArrowRight size={15} strokeWidth={2.4} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -1517,6 +1794,7 @@ export function Landing() {
       <TrustStrip />
       <StoryStage />
       <FeatureSections />
+      <MoreFeatures />
       <HowItWorks />
       <Stats />
       <CTA onLaunch={() => setLaunching(true)} />
