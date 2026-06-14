@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useAppStore } from '@/lib/appStore';
@@ -618,15 +619,11 @@ function MentorMatchContent() {
   const { careerProfile, target, bookMentorSession } = useAppStore();
   const { autoOpenChat } = useAppearance();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentNode = getNode(careerProfile.currentNodeId) ?? NODES[0];
   const targetNode = getNode(target || careerProfile.targetNodeId) ?? NODES[4];
-  const [filter, setFilter] = useState<FilterId>('all');
-  const [query, setQuery] = useState('');
-  const [topic, setTopic] = useState('all');
   const [bookingMentor, setBookingMentor] = useState<Mentor | null>(null);
   const [messagesByMentor, setMessagesByMentor] = useState<Record<string, ChatMessage[]>>(seedConversations);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatInitialId, setChatInitialId] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, MatchStatus>>({
     m3: 'matched',
@@ -645,6 +642,25 @@ function MentorMatchContent() {
     () => Array.from(new Set(mentors.flatMap((mentor) => mentor.topics))).sort(),
     [mentors],
   );
+  const filterParam = searchParams.get('filter');
+  const filter: FilterId =
+    filterParam === 'recommended' || filterParam === 'matched' ? filterParam : 'all';
+  const query = searchParams.get('q') ?? '';
+  const topicParam = searchParams.get('topic');
+  const topic = topicParam && allTopics.includes(topicParam) ? topicParam : 'all';
+  const chatParam = searchParams.get('chat');
+
+  const setMentorParam = (
+    key: string,
+    value: string | null,
+    defaultValue?: string,
+    options?: { replace?: boolean },
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, options);
+  };
 
   const scored = useMemo(
     () =>
@@ -693,7 +709,7 @@ function MentorMatchContent() {
 
   const request = (id: string) => {
     setStatuses((prev) => ({ ...prev, [id]: 'pending' }));
-    setFilter('matched');
+    setMentorParam('filter', 'matched', 'all');
   };
 
   const dismiss = (id: string) => {
@@ -702,22 +718,28 @@ function MentorMatchContent() {
 
   const accept = (id: string) => {
     setStatuses((prev) => ({ ...prev, [id]: 'matched' }));
-    setFilter('matched');
+    setMentorParam('filter', 'matched', 'all');
   };
 
   const openChat = (mentorId?: string) => {
-    setChatInitialId(mentorId ?? null);
-    setChatOpen(true);
+    setMentorParam('chat', mentorId ?? 'inbox');
+  };
+
+  const closeChat = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('chat');
+    next.delete('chatQ');
+    setSearchParams(next);
   };
 
   // Auto-open the chat window on visit when the preference is enabled.
   const didAutoOpen = useRef(false);
   useEffect(() => {
-    if (didAutoOpen.current || !autoOpenChat) return;
+    if (didAutoOpen.current || !autoOpenChat || chatParam) return;
     didAutoOpen.current = true;
-    setChatInitialId(null);
-    setChatOpen(true);
-  }, [autoOpenChat]);
+    openChat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenChat, chatParam]);
 
   // Mentors you have a relationship with get a conversation thread.
   const chatMentors = mentors.filter((mentor) => {
@@ -731,6 +753,10 @@ function MentorMatchContent() {
   }).length;
 
   const activeCount = Object.values(statuses).filter((s) => s === 'matched' || s === 'pending').length;
+  const chatInitialId = chatParam && chatParam !== 'inbox' && chatMentors.some((mentor) => mentor.id === chatParam)
+    ? chatParam
+    : null;
+  const chatOpen = chatParam !== null && chatMentors.length > 0;
   const visibleColumns: [VisibleMentor[], VisibleMentor[]] = [[], []];
   visible.forEach((item, index) => {
     visibleColumns[index % 2].push(item);
@@ -826,14 +852,14 @@ function MentorMatchContent() {
             <Icons.Search size={16} />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => setMentorParam('q', e.target.value || null, undefined, { replace: true })}
               placeholder="Search mentors, topics, companies..."
               className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-mute"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery('')}
+                onClick={() => setMentorParam('q', null, undefined, { replace: true })}
                 className="grid h-6 w-6 place-items-center rounded-lg text-ink-mute hover:bg-line/8 hover:text-ink"
                 aria-label="Clear search"
               >
@@ -843,7 +869,7 @@ function MentorMatchContent() {
           </label>
           <select
             value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            onChange={(e) => setMentorParam('topic', e.target.value, 'all')}
             className="focus-ring h-10 rounded-2xl border border-line/12 bg-surface px-3 text-sm font-semibold text-ink-soft"
             aria-label="Filter by mentor topic"
           >
@@ -862,7 +888,7 @@ function MentorMatchContent() {
           <button
             key={f.id}
             type="button"
-            onClick={() => setFilter(f.id)}
+            onClick={() => setMentorParam('filter', f.id, 'all')}
             className={cn(
               'focus-ring rounded-full border px-3.5 py-1.5 text-xs font-bold transition',
               filter === f.id
@@ -910,9 +936,11 @@ function MentorMatchContent() {
           <button
             type="button"
             onClick={() => {
-              setFilter('all');
-              setTopic('all');
-              setQuery('');
+              const next = new URLSearchParams(searchParams);
+              next.delete('filter');
+              next.delete('topic');
+              next.delete('q');
+              setSearchParams(next);
             }}
             className="text-xs font-semibold text-brand hover:underline"
           >
@@ -938,7 +966,7 @@ function MentorMatchContent() {
           messages={messagesByMentor}
           setMessages={setMessagesByMentor}
           initialMentorId={chatInitialId}
-          onClose={() => setChatOpen(false)}
+          onClose={closeChat}
         />
       )}
 

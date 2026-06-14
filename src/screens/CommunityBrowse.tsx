@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { Card, Badge } from '@/ui/components';
@@ -153,9 +153,25 @@ export function CommunityBrowse() {
   const { profile } = useProfile();
   const { target, saved, toggleSaved } = useAppStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | NodeKind>('all');
+  const query = searchParams.get('q') ?? '';
+  const kindParam = searchParams.get('kind');
+  const filter: 'all' | NodeKind = FILTERS.some((item) => item.id === kindParam)
+    ? (kindParam as 'all' | NodeKind)
+    : 'all';
+
+  const setBrowseParam = (
+    key: string,
+    value: string | null,
+    defaultValue?: string,
+    options?: { replace?: boolean },
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, options);
+  };
 
   const planIds = useMemo(
     () => getPlanChannelIds({ currentNodeId: profile.currentNodeId, target, saved }),
@@ -213,13 +229,13 @@ export function CommunityBrowse() {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setBrowseParam('q', e.target.value || null, undefined, { replace: true })}
             placeholder="Search channels..."
             className="w-full rounded-xl border border-line/12 bg-surface-2 py-2.5 pl-9 pr-9 text-sm text-ink placeholder:text-ink-mute outline-none transition focus:border-brand/40 focus:ring-1 focus:ring-brand/20"
           />
           {trimmed && (
             <button
-              onClick={() => setQuery('')}
+              onClick={() => setBrowseParam('q', null, undefined, { replace: true })}
               aria-label="Clear search"
               className="focus-ring absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-lg text-ink-mute hover:text-ink"
             >
@@ -231,7 +247,7 @@ export function CommunityBrowse() {
           {FILTERS.map((f) => (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => setBrowseParam('kind', f.id, 'all')}
               className={cn(
                 'focus-ring rounded-full border px-3 py-1.5 text-xs font-semibold transition',
                 filter === f.id

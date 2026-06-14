@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
@@ -25,13 +26,31 @@ export function TraileersMap() {
   const loading = useSimulatedLoading(1000);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { saved, careerProfile, target } = useAppStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentId = careerProfile.currentNodeId;
   const targetId = target || careerProfile.targetNodeId;
-  const [selectedId, setSelectedId] = useState<string | null>(currentId);
-  const [kind, setKind] = useState<NodeKind | 'all'>('all');
-  const [showRoute, setShowRoute] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [focusSaved, setFocusSaved] = useState(false);
+
+  const nodeParam = searchParams.get('node');
+  const kindParam = searchParams.get('kind');
+  const selectedId =
+    nodeParam === 'none'
+      ? null
+      : nodeParam && NODES.some((n) => n.id === nodeParam)
+        ? nodeParam
+        : currentId;
+  const kind = KIND_FILTERS.some((item) => item.value === kindParam)
+    ? (kindParam as NodeKind | 'all')
+    : 'all';
+  const showRoute = searchParams.get('route') !== '0';
+  const focusSaved = searchParams.get('saved') === '1';
+
+  const setMapParam = (key: string, value: string | null, defaultValue?: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next);
+  };
 
   const selected = selectedId ? getNode(selectedId) : null;
   const routes = getRoutesBetween(currentId, targetId);
@@ -43,8 +62,11 @@ export function TraileersMap() {
   );
 
   useEffect(() => {
-    setSelectedId((prev) => prev ?? currentId);
-  }, [currentId]);
+    if (nodeParam && nodeParam !== 'none' && !NODES.some((n) => n.id === nodeParam)) {
+      setMapParam('node', null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeParam]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 p-4 sm:p-6">
@@ -59,7 +81,7 @@ export function TraileersMap() {
               variant={showRoute ? 'primary' : 'secondary'}
               size="sm"
               icon={Icons.Route}
-              onClick={() => setShowRoute((s) => !s)}
+              onClick={() => setMapParam('route', showRoute ? '0' : null)}
             >
               {showRoute ? 'Hide route' : 'Show route'}
             </Button>
@@ -82,13 +104,13 @@ export function TraileersMap() {
                     <FilterSwitch
                       label="Show recommended route"
                       on={showRoute}
-                      onClick={() => setShowRoute((s) => !s)}
+                      onClick={() => setMapParam('route', showRoute ? '0' : null)}
                     />
                     <FilterSwitch
                       label={`Focus saved roles${saved.length ? ` (${saved.length})` : ''}`}
                       on={focusSaved}
                       disabled={saved.length === 0}
-                      onClick={() => setFocusSaved((f) => !f)}
+                      onClick={() => setMapParam('saved', focusSaved ? null : '1')}
                     />
                   </div>
                 </>
@@ -102,7 +124,7 @@ export function TraileersMap() {
         <SegmentedControl
           segments={KIND_FILTERS}
           value={kind}
-          onChange={setKind}
+          onChange={(value) => setMapParam('kind', value, 'all')}
           size="sm"
         />
         <div className="hidden items-center gap-2 text-xs font-semibold text-ink-mute sm:flex">
@@ -124,7 +146,7 @@ export function TraileersMap() {
           ) : (
             <MapGraph
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={(id) => setMapParam('node', id, currentId)}
               highlightPath={showRoute ? recommended?.path : undefined}
               currentId={currentId}
               targetId={targetId}
@@ -148,7 +170,7 @@ export function TraileersMap() {
         ) : (
           selected &&
           !loading && (
-            <MobileSheet onClose={() => setSelectedId(null)}>
+            <MobileSheet onClose={() => setMapParam('node', 'none')}>
               <NodeSummary node={selected} />
             </MobileSheet>
           )
@@ -165,7 +187,7 @@ export function TraileersMap() {
               return (
                 <button
                   key={id}
-                  onClick={() => setSelectedId(id)}
+                  onClick={() => setMapParam('node', id, currentId)}
                   className={cn(
                     'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition',
                     active

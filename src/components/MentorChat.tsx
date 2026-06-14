@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import {
@@ -149,9 +150,13 @@ export function MentorChat({
   initialMentorId?: string | null;
   onClose: () => void;
 }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const fallbackId = initialMentorId ?? mentors[0]?.id ?? null;
-  const [activeId, setActiveId] = useState<string | null>(fallbackId);
-  const [query, setQuery] = useState('');
+  const chatParam = searchParams.get('chat');
+  const activeId = chatParam && mentors.some((mentor) => mentor.id === chatParam)
+    ? chatParam
+    : fallbackId;
+  const query = searchParams.get('chatQ') ?? '';
   const [draft, setDraft] = useState('');
   const [typingFor, setTypingFor] = useState<string | null>(null);
   const [unread, setUnread] = useState<Record<string, boolean>>(() => {
@@ -223,7 +228,9 @@ export function MentorChat({
   }, [mentors, messages, query]);
 
   const openConversation = (id: string) => {
-    setActiveId(id);
+    const next = new URLSearchParams(searchParams);
+    next.set('chat', id);
+    setSearchParams(next);
     setShowThread(true);
     setUnread((prev) => {
       if (!prev[id]) return prev;
@@ -260,11 +267,15 @@ export function MentorChat({
       });
       setTypingFor(null);
       // Flag unread if the user has navigated away from this conversation.
-      setActiveId((current) => {
-        if (current !== mentorId) setUnread((u) => ({ ...u, [mentorId]: true }));
-        return current;
-      });
+      if (activeId !== mentorId) setUnread((u) => ({ ...u, [mentorId]: true }));
     }, 1400 + Math.random() * 800);
+  };
+
+  const setQuery = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('chatQ', value);
+    else next.delete('chatQ');
+    setSearchParams(next, { replace: true });
   };
 
   const onComposerKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

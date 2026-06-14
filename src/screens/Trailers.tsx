@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { Button, Card, Reveal } from '@/ui/components';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface Trailer {
   id: string;
@@ -68,8 +67,19 @@ const TRAILERS: Trailer[] = [
 ];
 
 export function Trailers() {
-  const [activeId, setActiveId] = useState(TRAILERS[0].id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const trailerParam = searchParams.get('trailer');
+  const activeId = TRAILERS.some((trailer) => trailer.id === trailerParam)
+    ? trailerParam!
+    : TRAILERS[0].id;
   const activeTrailer = TRAILERS.find((t) => t.id === activeId)!;
+
+  const setActiveId = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id === TRAILERS[0].id) next.delete('trailer');
+    else next.set('trailer', id);
+    setSearchParams(next);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">

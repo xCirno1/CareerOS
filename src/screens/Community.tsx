@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Icons, getIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
@@ -205,12 +205,15 @@ function ChannelSidebar({
   planNodes,
   activeId,
   onSelect,
+  query,
+  onQuery,
 }: {
   planNodes: CareerNode[];
   activeId: string;
   onSelect: (id: string) => void;
+  query: string;
+  onQuery: (query: string) => void;
 }) {
-  const [query, setQuery] = useState('');
   const trimmed = query.trim().toLowerCase();
   const filteredNodes = trimmed
     ? planNodes.filter(
@@ -231,14 +234,14 @@ function ChannelSidebar({
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => onQuery(e.target.value)}
           placeholder="Search channels..."
           className="w-full rounded-xl border border-line/12 bg-surface-2 py-2 pl-8 pr-8 text-sm text-ink placeholder:text-ink-mute outline-none transition focus:border-brand/40 focus:ring-1 focus:ring-brand/20"
         />
         {trimmed && (
           <button
             type="button"
-            onClick={() => setQuery('')}
+            onClick={() => onQuery('')}
             aria-label="Clear channel search"
             className="focus-ring absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-lg text-ink-mute hover:text-ink"
           >
@@ -316,6 +319,7 @@ export function Community() {
   const { target, saved } = useAppStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const channelParam = searchParams.get('channel');
+  const channelQuery = searchParams.get('q') ?? '';
 
   // The user's "career plan" channels: current role, every step of the
   // recommended route toward the target, the target itself, and saved roles.
@@ -325,23 +329,11 @@ export function Community() {
     return NODES.filter((n) => ids.has(n.id));
   }, [profile.currentNodeId, target, saved]);
 
-  const [activeId, setActiveId] = useState<string>(() => {
-    if (channelParam && NODES.some((n) => n.id === channelParam)) return channelParam;
-    return planNodes[0]?.id ?? NODES[0].id;
-  });
+  const activeId = channelParam && NODES.some((n) => n.id === channelParam)
+    ? channelParam
+    : planNodes[0]?.id ?? NODES[0].id;
   const [channelPosts, setChannelPosts] = useState<Record<string, Post[]>>({});
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
-
-  useEffect(() => {
-    if (channelParam && NODES.some((n) => n.id === channelParam)) {
-      setActiveId(channelParam);
-      return;
-    }
-    setActiveId((current) => {
-      if (NODES.some((n) => n.id === current)) return current;
-      return planNodes[0]?.id ?? NODES[0].id;
-    });
-  }, [channelParam, planNodes]);
 
   const activeNode = NODES.find((n) => n.id === activeId)!;
   const posts = channelPosts[activeId] ?? getChannelPosts(activeId);
@@ -349,10 +341,16 @@ export function Community() {
   const ChannelIcon = getIcon(getNodeIcon(activeNode));
 
   const handleSelectChannel = (id: string) => {
-    setActiveId(id);
     const next = new URLSearchParams(searchParams);
     next.set('channel', id);
     setSearchParams(next);
+  };
+
+  const handleChannelQuery = (query: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (query) next.set('q', query);
+    else next.delete('q');
+    setSearchParams(next, { replace: true });
   };
 
   const handlePost = (text: string) => {
@@ -427,7 +425,13 @@ export function Community() {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Sidebar — desktop only; mobile uses the bottom sheet below */}
         <div className="hidden lg:block lg:shrink-0">
-          <ChannelSidebar planNodes={planNodes} activeId={activeId} onSelect={handleSelectChannel} />
+          <ChannelSidebar
+            planNodes={planNodes}
+            activeId={activeId}
+            onSelect={handleSelectChannel}
+            query={channelQuery}
+            onQuery={handleChannelQuery}
+          />
         </div>
 
         {/* Feed */}
@@ -497,6 +501,8 @@ export function Community() {
             <ChannelSidebar
               planNodes={planNodes}
               activeId={activeId}
+              query={channelQuery}
+              onQuery={handleChannelQuery}
               onSelect={(id) => {
                 handleSelectChannel(id);
                 setMobileChannelsOpen(false);

@@ -2,8 +2,10 @@ import { Icons } from '@/lib/icons';
 import { Card, Reveal, Button } from '@/ui/components';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useSearchParams } from 'react-router-dom';
 
 interface ContactChannel {
+  id: string;
   name: string;
   scope: string;
   email: string;
@@ -12,21 +14,25 @@ interface ContactChannel {
 
 const CHANNELS: ContactChannel[] = [
   {
+    id: 'candidates',
     name: 'Candidates',
     scope: 'Account assistance, Living Portfolio verification, or privacy requests.',
     email: 'support@talentbank.io',
   },
   {
+    id: 'employers',
     name: 'Employers',
     scope: 'Product demos, API integrations, and talent matches.',
     email: 'partners@talentbank.io',
   },
   {
+    id: 'universities',
     name: 'Universities',
     scope: 'Career services dashboard setup and outcome tracking.',
     email: 'edu@talentbank.io',
   },
   {
+    id: 'security',
     name: 'Security & Operations',
     scope: 'Vulnerability disclosures and data privacy audits.',
     email: 'security@talentbank.io',
@@ -35,7 +41,9 @@ const CHANNELS: ContactChannel[] = [
 ];
 
 export function Contact() {
-  const [dept, setDept] = useState('Candidates');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deptParam = searchParams.get('dept');
+  const dept = CHANNELS.some((channel) => channel.id === deptParam) ? deptParam! : CHANNELS[0].id;
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
@@ -43,6 +51,13 @@ export function Contact() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSent(true);
+  };
+
+  const setDept = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id === CHANNELS[0].id) next.delete('dept');
+    else next.set('dept', id);
+    setSearchParams(next);
   };
 
   return (
@@ -113,7 +128,7 @@ export function Contact() {
                     className="w-full h-11 px-3.5 rounded-2xl border border-line/20 bg-surface text-sm text-ink outline-none focus:border-brand"
                   >
                     {CHANNELS.map((ch) => (
-                      <option key={ch.name} value={ch.name}>
+                      <option key={ch.id} value={ch.id}>
                         {ch.name}
                       </option>
                     ))}

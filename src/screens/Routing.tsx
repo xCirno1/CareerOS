@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useMediaQuery } from '@/lib/hooks';
@@ -62,21 +62,24 @@ export function Routing() {
   const { target, setTarget, careerProfile } = useAppStore();
   const toast = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const targetParam = searchParams.get('target');
+  const selectedRouteId = searchParams.get('route');
+  const urlTarget = targetParam && NODES.some((n) => n.id === targetParam) ? targetParam : null;
 
   const from = getNode(careerProfile.currentNodeId)!;
-  const to = getNode(target) ?? getNode(TARGET_NODE_ID)!;
+  const to = getNode(urlTarget ?? target) ?? getNode(TARGET_NODE_ID)!;
   const routesForTarget = rankRoutes(
     getRoutesBetween(from.id, to.id),
     careerProfile.priorities,
   );
+  const defaultRoute = routesForTarget.find((r) => r.recommended) ?? routesForTarget[0];
   // selection falls back to the recommended (or first) route — so it always
   // resolves to a valid route for the *current* target after a target change.
   const selectedRoute =
     routesForTarget.find((r) => r.id === selectedRouteId) ??
-    routesForTarget.find((r) => r.recommended) ??
-    routesForTarget[0];
+    defaultRoute;
   const routeHeaderNodes = (selectedRoute?.path ?? (from.id === to.id ? [from.id] : [from.id, to.id]))
     .map((id) => getNode(id))
     .filter((node): node is CareerNode => Boolean(node));
@@ -97,7 +100,19 @@ export function Routing() {
       });
     }, rootRef);
     return () => ctx.revert();
-  }, [loading, target]);
+  }, [loading, target, to.id]);
+
+  useEffect(() => {
+    if (urlTarget && urlTarget !== target) setTarget(urlTarget);
+  }, [setTarget, target, urlTarget]);
+
+  const setRoutingParam = (key: string, value: string | null, defaultValue?: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    if (key === 'target') next.delete('route');
+    setSearchParams(next);
+  };
 
   const exportPlan = () => {
     if (!selectedRoute) return;
@@ -128,6 +143,7 @@ export function Routing() {
 
   const pickTarget = (id: string) => {
     setTarget(id);
+    setRoutingParam('target', id, TARGET_NODE_ID);
     setTargetPickerOpen(false);
     toast(`Target set to ${getNode(id)?.title ?? 'role'}`, { icon: Icons.Target, tone: 'info' });
   };
@@ -240,7 +256,7 @@ export function Routing() {
                     key={r.id}
                     route={r}
                     active={r.id === selectedRoute?.id}
-                    onSelect={() => setSelectedRouteId(r.id)}
+                    onSelect={() => setRoutingParam('route', r.id, defaultRoute?.id)}
                   />
                 ))}
           </div>

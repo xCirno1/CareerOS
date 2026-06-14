@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TimetableProvider, useTimetable } from '@/lib/TimetableContext';
 import { WeekGrid } from '@/ui/components/timetable/WeekGrid';
 import { RightPanel } from '@/ui/components/timetable/RightPanel';
@@ -16,11 +16,27 @@ const topBtn =
 function TimetableInner() {
   const { addEvent, events, removeEvent, targetNode, targetReadiness, isComplete, pendingPlacement, undo, canUndo } = useTimetable();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const [viewWeek, setViewWeek] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const weekParam = Number(searchParams.get('week'));
+  const viewWeek = Number.isFinite(weekParam) ? weekParam : 0;
+  const eventParam = searchParams.get('event');
+  const selectedId = eventParam && events.some((event) => event.id === eventParam) ? eventParam : null;
+
+  const setTimetableParams = (updates: { week?: number; event?: string | null }) => {
+    const next = new URLSearchParams(searchParams);
+    if (updates.week !== undefined) {
+      if (updates.week === 0) next.delete('week');
+      else next.set('week', String(updates.week));
+    }
+    if (updates.event !== undefined) {
+      if (updates.event) next.set('event', updates.event);
+      else next.delete('event');
+    }
+    setSearchParams(next);
+  };
 
   // Manual placement needs the grid: drop the mobile sheet so it's reachable.
   useEffect(() => {
@@ -28,19 +44,19 @@ function TimetableInner() {
   }, [pendingPlacement]);
 
   function select(id: string | null) {
-    setSelectedId(id);
+    setTimetableParams({ event: id });
     if (id && !isDesktop) setSheetOpen(true);
   }
 
   function goToWeek(updater: number | ((w: number) => number)) {
-    setSelectedId(null); // a selected block may not exist in the new week
-    setViewWeek(updater);
+    const nextWeek = typeof updater === 'function' ? updater(viewWeek) : updater;
+    setTimetableParams({ week: nextWeek, event: null }); // a selected block may not exist in the new week
   }
 
   function handleUndo() {
     if (!canUndo) return;
     undo();
-    setSelectedId(null);
+    select(null);
     toast('Change undone', { icon: Icons.Undo2, tone: 'info' });
   }
 
@@ -64,7 +80,7 @@ function TimetableInner() {
       const el = e.target as HTMLElement | null;
       const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
       if (e.key === 'Escape') {
-        setSelectedId(null);
+        select(null);
         setSheetOpen(false);
         return;
       }
@@ -78,7 +94,7 @@ function TimetableInner() {
         if (ev && ev.source === 'company') return; // company events are managed via subscriptions
         e.preventDefault();
         removeEvent(selectedId); // handles mentor cancellation + stored deletion
-        setSelectedId(null);
+        select(null);
       }
     }
     window.addEventListener('keydown', onKey);
@@ -169,7 +185,7 @@ function TimetableInner() {
       {/* Mobile: floating panel toggle */}
       {!isDesktop && !sheetOpen && (
         <button
-          onClick={() => { setSelectedId(null); setSheetOpen(true); }}
+          onClick={() => { select(null); setSheetOpen(true); }}
           aria-label="Open panel"
           className="focus-ring absolute bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-navy text-white shadow-glass dark:bg-brand dark:text-navy"
         >

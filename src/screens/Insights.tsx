@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Icons, getIcon, type LucideIcon } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { useSimulatedLoading, useReducedMotion } from '@/lib/hooks';
@@ -100,6 +100,9 @@ const TABS: { id: TabId; label: string; icon: LucideIcon; blurb: string }[] = [
   { id: 'history', label: 'History', icon: Icons.LineChart, blurb: 'Six quarters of demand trajectory' },
 ];
 
+const isTabId = (value: string | null): value is TabId =>
+  Boolean(value && TABS.some((tab) => tab.id === value));
+
 function InnerNav({ tab, onTab }: { tab: TabId; onTab: (t: TabId) => void }) {
   return (
     <div className="sticky top-16 z-10 -mx-1 mb-5 py-2">
@@ -135,7 +138,16 @@ function InnerNav({ tab, onTab }: { tab: TabId; onTab: (t: TabId) => void }) {
 
 export function Insights() {
   const loading = useSimulatedLoading(850);
-  const [tab, setTab] = useState<TabId>('rankings');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: TabId = isTabId(tabParam) ? tabParam : 'rankings';
+
+  const setInsightsParam = (key: string, value: string | null, defaultValue?: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next);
+  };
 
   const asOf = useMemo(
     () => new Date().toLocaleDateString(undefined, { month: 'short', year: 'numeric' }),
@@ -167,7 +179,7 @@ export function Insights() {
       <KpiStrip loading={loading} />
 
       {/* Inner navigation bar */}
-      <InnerNav tab={tab} onTab={setTab} />
+      <InnerNav tab={tab} onTab={(value) => setInsightsParam('tab', value, 'rankings')} />
 
       <div className="flex items-center gap-2 text-sm text-ink-soft">
         <Icons.Info size={15} className="text-brand" />
@@ -578,10 +590,22 @@ const METRICS: Metric[] = [
   },
 ];
 
+const isMetricId = (value: string | null): value is MetricId =>
+  Boolean(value && METRICS.some((metric) => metric.id === value));
+
 function RankingsPanel() {
-  const [metricId, setMetricId] = useState<MetricId>('growth');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const metricParam = searchParams.get('metric');
+  const metricId: MetricId = isMetricId(metricParam) ? metricParam : 'growth';
   const metric = METRICS.find((m) => m.id === metricId)!;
   const grown = useGrow();
+
+  const setMetricId = (value: MetricId) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === 'growth') next.delete('metric');
+    else next.set('metric', value);
+    setSearchParams(next);
+  };
 
   const ranked = useMemo(
     () => [...NODES].sort((a, b) => metric.get(b) - metric.get(a)),
@@ -1053,6 +1077,7 @@ function DemandScatter({ grown }: { grown: boolean }) {
 /* ------------------------------------------------------------------ */
 
 function HistoryPanel() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const quarters = useMemo(() => lastQuarters(6), []);
   const initial = useMemo(() => {
     const ids = new Set<string>([CURRENT_NODE_ID, TARGET_NODE_ID]);
@@ -1060,19 +1085,35 @@ function HistoryPanel() {
       .sort((a, b) => b.trend[b.trend.length - 1] - a.trend[a.trend.length - 1])
       .forEach((n) => {
         if (ids.size < 5) ids.add(n.id);
-      });
+    });
     return ids;
   }, []);
-  const [shown, setShown] = useState<Set<string>>(initial);
+  const shown = useMemo(() => {
+    const raw = searchParams.get('roles');
+    if (!raw) return initial;
+    const ids = new Set(
+      raw
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => NODES.some((node) => node.id === id)),
+    );
+    return ids.size ? ids : initial;
+  }, [initial, searchParams]);
 
-  const toggle = (id: string) =>
-    setShown((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size > 1) next.delete(id);
-      } else next.add(id);
-      return next;
-    });
+  const toggle = (id: string) => {
+    const nextShown = new Set(shown);
+    if (nextShown.has(id)) {
+      if (nextShown.size > 1) nextShown.delete(id);
+    } else {
+      nextShown.add(id);
+    }
+    const next = new URLSearchParams(searchParams);
+    const value = Array.from(nextShown).join(',');
+    const defaultValue = Array.from(initial).join(',');
+    if (value === defaultValue) next.delete('roles');
+    else next.set('roles', value);
+    setSearchParams(next);
+  };
 
   // biggest movers over the window
   const movers = useMemo(

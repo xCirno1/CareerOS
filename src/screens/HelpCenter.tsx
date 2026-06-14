@@ -1,6 +1,6 @@
 import { Icons } from '@/lib/icons';
 import { Card, Reveal, Badge } from '@/ui/components';
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 interface Guide {
   title: string;
@@ -42,8 +42,25 @@ const GUIDES: Guide[] = [
 ];
 
 export function HelpCenter() {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'candidates' | 'employers' | 'universities'>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('q') ?? '';
+  const categoryParam = searchParams.get('category');
+  const filter: 'all' | 'candidates' | 'employers' | 'universities' =
+    categoryParam === 'candidates' || categoryParam === 'employers' || categoryParam === 'universities'
+      ? categoryParam
+      : 'all';
+
+  const setHelpParam = (
+    key: string,
+    value: string | null,
+    defaultValue?: string,
+    options?: { replace?: boolean },
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, options);
+  };
 
   const filteredGuides = GUIDES.filter((g) => {
     const matchesSearch = g.title.toLowerCase().includes(search.toLowerCase()) || g.excerpt.toLowerCase().includes(search.toLowerCase());
@@ -70,7 +87,7 @@ export function HelpCenter() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setHelpParam('q', e.target.value || null, undefined, { replace: true })}
               placeholder="Search guides, modules, variables..."
               className="w-full h-12 pl-11 pr-4 rounded-full border border-line/20 bg-surface text-sm text-ink outline-none focus:border-brand shadow-soft"
             />
@@ -90,7 +107,7 @@ export function HelpCenter() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setFilter(tab.id as any)}
+                onClick={() => setHelpParam('category', tab.id, 'all')}
                 className={`h-9 px-4 rounded-full text-xs font-semibold transition ${
                   filter === tab.id
                     ? 'bg-brand text-navy'
