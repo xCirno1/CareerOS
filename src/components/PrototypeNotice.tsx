@@ -9,6 +9,7 @@ import {
   type AccountMode,
   type Plan,
 } from '@/lib/subscription';
+import { useWalkthrough } from '@/lib/walkthrough';
 
 const AUTO_COLLAPSE_MS = 3000;
 
@@ -31,6 +32,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 export function PrototypeNotice() {
   const location = useLocation();
   const { plan, setPlan, mode, setMode, authed, setAuthed, reset } = useSubscription();
+  const { start: startWalkthrough, seen: walkthroughSeen } = useWalkthrough();
   const [warningVisible, setWarningVisible] = useState(true);
   const [sandboxOpen, setSandboxOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,6 +109,24 @@ export function PrototypeNotice() {
           </div>
 
           <div className="divide-y divide-line/10">
+            <Section label="Walkthrough">
+              <button
+                type="button"
+                onClick={() => {
+                  setSandboxOpen(false);
+                  startWalkthrough();
+                }}
+                className="focus-ring flex w-full items-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/15"
+              >
+                <Icons.Compass size={15} strokeWidth={2.2} />
+                {walkthroughSeen ? 'Replay walkthrough' : 'Start walkthrough'}
+                <Icons.ChevronRight size={15} className="ml-auto" />
+              </button>
+              <p className="mt-2 text-[11px] leading-4 text-ink-mute">
+                A quick guided tour of every screen. Skip anytime.
+              </p>
+            </Section>
+
             <Section label="Authentication">
               <button
                 type="button"
