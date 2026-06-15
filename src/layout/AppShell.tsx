@@ -379,7 +379,7 @@ function ProfileMenu() {
   };
 
   return (
-    <div ref={menuRef} className="relative hidden sm:block">
+    <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className="focus-ring rounded-full transition hover:opacity-90"
@@ -602,7 +602,7 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-0">
+        <main className="min-h-[calc(100vh-4rem)] overflow-x-clip pb-24 lg:pb-0">
           {/* keyed wrapper → re-mounts and replays the entrance on every route change */}
           <div key={location.pathname} className="animate-fade-up">
             {children}
@@ -614,18 +614,8 @@ function Shell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line/10 bg-surface/90 backdrop-blur-xl lg:hidden">
         <div
           className="mx-auto grid max-w-md"
-          style={{ gridTemplateColumns: `repeat(${NAV.length + 2}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
         >
-          <Link
-            to="/"
-            className={cn(
-              'flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition',
-              location.pathname === '/' ? 'text-brand' : 'text-ink-mute',
-            )}
-          >
-            <Icons.Compass size={20} />
-            Home
-          </Link>
           {NAV.map((item) => {
             const active = location.pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -634,7 +624,7 @@ function Shell({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  'flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition',
+                  'flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold leading-tight transition',
                   active ? 'text-brand' : 'text-ink-mute',
                 )}
               >
@@ -643,13 +633,6 @@ function Shell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-          <button
-            onClick={() => setPaletteOpen(true)}
-            className="flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold text-ink-mute"
-          >
-            <Icons.Search size={20} />
-            Search
-          </button>
         </div>
       </nav>
 

@@ -330,6 +330,14 @@ svg {
 
 /* ---- Reusable component classes ------------------------------------ */
 @layer components {
+  /* Hide scrollbars while keeping the element scrollable (e.g. mobile tab rows). */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   .glass {
     @apply border border-line/10 bg-surface/70 backdrop-blur-xl;
   }

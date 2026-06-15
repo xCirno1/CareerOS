@@ -951,7 +951,7 @@ function EditModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Edit profile">
       <div className="absolute inset-0 bg-navy/45 backdrop-blur-[3px]" onClick={onClose} />
-      <div className="relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-2xl sm:rounded-[1.75rem]">
+      <div className="relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-2xl sm:rounded-[1.75rem]">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line/10 bg-surface/90 px-5 py-4 backdrop-blur sm:px-6">
           <h3 className="flex items-center gap-2 text-lg font-extrabold text-ink">
             <Icons.Pencil size={18} className="text-brand" /> Edit profile

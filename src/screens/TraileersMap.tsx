@@ -38,7 +38,11 @@ export function TraileersMap() {
       ? null
       : nodeParam && NODES.some((n) => n.id === nodeParam)
         ? nodeParam
-        : currentId;
+        // Desktop keeps the side panel populated with the current role; mobile
+        // starts with nothing selected so the detail sheet doesn't auto-open.
+        : isDesktop
+          ? currentId
+          : null;
   const kind = KIND_FILTERS.some((item) => item.value === kindParam)
     ? (kindParam as NodeKind | 'all')
     : 'all';
@@ -69,7 +73,7 @@ export function TraileersMap() {
   }, [nodeParam]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 p-4 sm:p-6">
+    <div className="flex h-[calc(100dvh-9rem)] flex-col gap-4 p-4 sm:p-6 lg:h-[calc(100dvh-4rem)]">
       <PageHeader
         eyebrow="Traileers™ Map"
         icon={Icons.Network}
@@ -146,7 +150,7 @@ export function TraileersMap() {
           ) : (
             <MapGraph
               selectedId={selectedId}
-              onSelect={(id) => setMapParam('node', id, currentId)}
+              onSelect={(id) => setMapParam('node', id, isDesktop ? currentId : undefined)}
               highlightPath={showRoute ? recommended?.path : undefined}
               currentId={currentId}
               targetId={targetId}
@@ -187,7 +191,7 @@ export function TraileersMap() {
               return (
                 <button
                   key={id}
-                  onClick={() => setMapParam('node', id, currentId)}
+                  onClick={() => setMapParam('node', id, isDesktop ? currentId : undefined)}
                   className={cn(
                     'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition',
                     active
@@ -266,7 +270,7 @@ function MobileSheet({
   return (
     <div className="fixed inset-0 z-40 flex items-end lg:hidden">
       <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative max-h-[82vh] w-full animate-fade-up overflow-y-auto rounded-t-[2rem] border-t border-line/10 bg-surface p-5 pb-28 shadow-glass">
+      <div className="relative max-h-[82dvh] w-full animate-fade-up overflow-y-auto rounded-t-[2rem] border-t border-line/10 bg-surface p-5 pb-28 shadow-glass">
         <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-line/20" />
         <button
           onClick={onClose}

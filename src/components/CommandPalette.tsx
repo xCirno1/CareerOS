@@ -87,7 +87,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-[12vh]" onKeyDown={onKey}>
+    <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-[12dvh]" onKeyDown={onKey}>
       <div className="absolute inset-0 animate-[fade-up_0.2s_ease] bg-navy/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-xl animate-fade-up overflow-hidden rounded-3xl border border-line/12 bg-surface shadow-glass">
         <div className="flex items-center gap-3 border-b border-line/10 px-4">
@@ -104,7 +104,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           </kbd>
         </div>
 
-        <div className="max-h-[52vh] overflow-y-auto p-2">
+        <div className="max-h-[52dvh] overflow-y-auto p-2">
           {results.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-ink-mute">No matches for “{q}”.</p>
           ) : (

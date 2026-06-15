@@ -202,10 +202,11 @@ export function NodeDetail() {
       ) : (
         <Card className="nd-reveal overflow-hidden">
           <div className="relative p-6 sm:p-8" style={getKindHeroStyle(node.kind, accent)}>
-            <div className="flex flex-wrap items-start gap-5">
-              <span
-                className={cn(
-                  'grid h-16 w-16 shrink-0 place-items-center border shadow-soft',
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              <div className="flex items-start justify-between gap-4 sm:contents">
+                <span
+                  className={cn(
+                    'grid h-16 w-16 shrink-0 place-items-center border shadow-soft sm:order-1',
                   node.kind === 'career'
                     ? 'rounded-[1.35rem]'
                     : node.kind === 'industry'
@@ -220,7 +221,11 @@ export function NodeDetail() {
               >
                 <RoleIcon size={30} strokeWidth={2.1} />
               </span>
-              <div className="min-w-0 flex-1">
+                <div className="shrink-0 sm:order-3">
+                  <ProgressRing value={node.match} sublabel="your match" tone="brand" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 sm:order-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={kindMeta.badgeTone} icon={KindIcon}>
                     {kindMeta.label}
@@ -298,9 +303,6 @@ export function NodeDetail() {
                   </Button>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <ProgressRing value={node.match} sublabel="your match" tone="brand" />
-              </div>
             </div>
           </div>
         </Card>
@@ -375,7 +377,7 @@ export function NodeDetail() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         {/* Left column */}
-        <div className="nd-reveal space-y-4">
+        <div className="nd-reveal min-w-0 space-y-4">
           {/* Market demand */}
           <SpotlightCard accentHex={accent} id="demand" className="p-5 sm:p-6">
             <SectionTitle icon={Icons.Activity} title="Live market demand" hint="Last 6 quarters" />
@@ -383,7 +385,7 @@ export function NodeDetail() {
               <Skeleton className="mt-4 h-24" rounded="rounded-2xl" />
             ) : (
               <div className="mt-4 flex items-end justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className={cn('text-3xl font-extrabold', demand.tone)}>{demand.label}</div>
                   <p className="mt-1 text-sm text-ink-soft">
                     {node.openRoles.toLocaleString()} active roles · trending{' '}
@@ -395,6 +397,7 @@ export function NodeDetail() {
                   tone={node.growth >= 0 ? 'emerald' : 'wine'}
                   width={180}
                   height={56}
+                  className="hidden shrink-0 sm:block"
                 />
               </div>
             )}
@@ -576,7 +579,7 @@ export function NodeDetail() {
         </div>
 
         {/* Right column */}
-        <div className="nd-reveal space-y-4">
+        <div className="nd-reveal min-w-0 space-y-4">
           {/* Feasibility */}
           <SpotlightCard accentHex={accent} id="feasibility" className="p-5 sm:p-6">
             <SectionTitle icon={Icons.Gauge} title="Feasibility for you" />
@@ -1036,7 +1039,7 @@ function TaskDetailModal({
       <div className="absolute inset-0 bg-navy/45 backdrop-blur-[3px]" onClick={onClose} />
       <div
         ref={panelRef}
-        className="relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-lg sm:rounded-[1.75rem]"
+        className="relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-lg sm:rounded-[1.75rem]"
       >
         <div
           className="relative overflow-hidden p-5 sm:p-6"
@@ -1180,14 +1183,16 @@ function getKindHeroStyle(kind: NodeKind, accent: string): CSSProperties {
 function HeroSkeleton() {
   return (
     <Card className="p-6 sm:p-8">
-      <div className="flex flex-wrap items-start gap-5">
-        <Skeleton className="h-16 w-16" rounded="rounded-3xl" />
-        <div className="flex-1 space-y-3">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+        <div className="flex items-start justify-between gap-4 sm:contents">
+          <Skeleton className="h-16 w-16 sm:order-1" rounded="rounded-3xl" />
+          <Skeleton className="h-28 w-28 shrink-0 sm:order-3" rounded="rounded-full" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3 sm:order-2">
           <Skeleton className="h-5 w-40" rounded="rounded-full" />
           <Skeleton className="h-9 w-2/3" />
           <SkeletonText lines={2} />
         </div>
-        <Skeleton className="h-28 w-28" rounded="rounded-full" />
       </div>
     </Card>
   );

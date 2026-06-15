@@ -487,7 +487,7 @@ export function Community() {
             className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
             onClick={() => setMobileChannelsOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[80vh] animate-fade-up overflow-y-auto rounded-t-3xl border-t border-line/10 bg-surface p-4 pb-8">
+          <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] animate-fade-up overflow-y-auto rounded-t-3xl border-t border-line/10 bg-surface p-4 pb-8">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-bold text-ink">Channels</p>
               <button

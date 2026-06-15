@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'focus-ring group inline-flex select-none items-center justify-center font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-ring group inline-flex select-none items-center justify-center whitespace-nowrap font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         sizes[size],
         block && 'w-full',
@@ -65,14 +65,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           aria-hidden
         />
       ) : (
-        Icon && <Icon size={iconSize} strokeWidth={2.2} />
+        Icon && <Icon size={iconSize} strokeWidth={2.2} className="shrink-0" />
       )}
       {children}
       {IconRight && !loading && (
         <IconRight
           size={iconSize}
           strokeWidth={2.2}
-          className="transition-transform group-hover:translate-x-0.5"
+          className="shrink-0 transition-transform group-hover:translate-x-0.5"
         />
       )}
     </button>

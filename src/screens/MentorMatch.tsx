@@ -1035,7 +1035,7 @@ function ModalShell({
       aria-label={title}
     >
       <div className="absolute inset-0 bg-navy/50 backdrop-blur-md" onClick={onClose} />
-      <div className="relative z-10 max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-lg">
+      <div className="relative z-10 max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-[1.75rem] border border-line/10 bg-surface shadow-glass sm:max-w-lg">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line/10 bg-surface/90 px-5 py-4 backdrop-blur">
           <h3 className="flex items-center gap-2 text-lg font-extrabold text-ink">
             <Icon size={18} className="text-brand" /> {title}
